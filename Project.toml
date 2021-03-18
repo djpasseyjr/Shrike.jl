@@ -1,4 +1,4 @@
-name = "RPTrees.jl"
+name = "RPTrees"
 uuid = "e7e127b8-87f2-11eb-1459-934231b01f31"
 authors = ["DJ Passey <djpasseyjr@gmail.com>"]
 version = "0.1.0"
