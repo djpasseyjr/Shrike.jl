@@ -38,7 +38,7 @@ after_success:
   # - julia --project -e 'import Pkg; Pkg.add("Documenter"); Pkg.add("DocumenterTools");'
 
   # Submit test coverage report
-  - julia -e 'using Pkg; cd(Pkg.dir("RPTrees")); using Coverage; Codecov.submit(Codecov.process_folder())'
+  - julia --project -e 'using Coverage; Codecov.submit(Codecov.process_folder())'
 
   # Build and deploy documentation
   # - julia --project ./docs/make.jl
