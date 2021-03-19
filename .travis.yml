@@ -26,14 +26,14 @@ matrix:
 # before_install:
 
 script:
-  - julia --project -e 'import Pkg; Pkg.build(); Pkg.test("NeuralVerification"; coverage=true)'
+  - julia --project -e 'import Pkg; Pkg.build(); Pkg.test("RPTrees"; coverage=true)'
 
 # After successful build submit coverage report and deploy updated documentation
 # But limit deployment to the linux worker so this is done only once.
 after_success:
   # Install required packages for coverage
   - julia --project -e 'using Pkg; Pkg.add("Coverage");'
-  
+
   # Install pacakges for documentation
   # - julia --project -e 'import Pkg; Pkg.add("Documenter"); Pkg.add("DocumenterTools");'
 
