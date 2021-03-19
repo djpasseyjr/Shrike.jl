@@ -1,6 +1,7 @@
 module RPTrees
 
     using AbstractTrees
+    using LinearAlgebra
     using StatsBase: median
 
     include("rptree.jl")

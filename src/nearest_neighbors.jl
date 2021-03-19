@@ -5,8 +5,9 @@ Route data point `x` down to a leaf node each tree and return and array of
 indexes of the data stored in each corresponding leaf node
 """
 function traverse_to_leaves(rpf::RPForest{T}, x::Array{T, 2}) where T
+    #TODO Dispatch on shape of x?
     # Compute all needed projections
-    proj = rpf.random_vectors * x
+    proj = reshape(transpose(x) * rpf.random_vectors, :)
     # Initial node indexes (Root index for each tree)
     node_idxs = ones(Int, rpf.ntrees)
     # Location of projection value for the current depth (Starts at
@@ -15,11 +16,11 @@ function traverse_to_leaves(rpf::RPForest{T}, x::Array{T, 2}) where T
     # For each level of the trees
     for d in 1:rpf.depth
         # Determine if the projection is on the left or right of the split
-        mask = proj[projection_idxs] .<  _get_splits(rpf, node_idxs)
+        mask = proj[projection_idxs] .>=  _get_splits(rpf, node_idxs)
         # Move node indexes to the right child
         node_idxs .*= 2
         # Change to left child if the projection was less than the split value
-        node_idxs[mask] .-= 1
+        node_idxs[mask] .+= 1
         # Increase depth of projection locations by one
         projection_idxs .+= 1
     end

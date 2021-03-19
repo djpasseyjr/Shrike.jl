@@ -16,13 +16,13 @@ Note that RP forest does not store indexes at non-leaf nodes.
 """
 
 struct RPForest{T}
-    data::Array{T, 2}
+    data::AbstractArray{T, 2}
     npoints::Int
     ndims::Int
     depth::Int
     ntrees::Int
-    random_vectors::AbstractArray
-    splits::Array{T, 2}
+    random_vectors::AbstractArray{T, 2}
+    splits::AbstractArray{T, 2}
     indexes::Array{Array{Int,1}, 2}
 end
 
@@ -37,14 +37,14 @@ Ville Hyvönen, Teemu Pitkänen, Sotirios Tasoulis, Elias Jääsaari, Risto Tuom
 Liang Wang, Jukka Ilmari Corander, Teemu Roos. Proceedings of the 2016 IEEE
 Conference on Big Data (2016)
 """
-function RPForest(data::Array{T, 2}, maxdepth::Int, ntrees::Int) where T
+function RPForest(data::AbstractArray{T, 2}, maxdepth::Int, ntrees::Int) where T
     # Need depth check
     ndims, npoints = size(data)
     sparse_vecs::Bool = ndims > 500
     random_vectors = random_projections(T, maxdepth*ntrees, ndims, sparse = sparse_vecs)
     nsplits = 2^maxdepth -1 # Number of splits in the tree (Same as number of non-leaf nodes)
     splits = zeros(T, ntrees, nsplits) # Array for storing hyperplane split values
-    projections = random_vectors * data # projection[i, j] = the projection of point j onto the ith random vector
+    projections = transpose(data) * random_vectors  # projection[i, j] = the projection of point i onto the jth random vector
     nleafs = 2^maxdepth
     leaf_node_data_idxs = Array{Array{Int, 1}, 2}(undef, nleafs, ntrees) # Array for storing data indexes at the leaf
 
@@ -57,11 +57,12 @@ function RPForest(data::Array{T, 2}, maxdepth::Int, ntrees::Int) where T
             for i in 1:length(prev_level)
                 idxs = prev_level[i]
                 # Compute median value of the projection of all current datapoints
-                med::T = median(projections[proj_row, idxs]) # I think this requires a sort, so this process can be sped up slightly
+                p = reshape(projections[idxs, proj_row], :)
+                med::T = median(p) # I think this requires a sort, so this process can be sped up slightly
                 splits[t, next_split_idx] = med
                 next_split_idx += 1
                 # Separate data points across hyperplane using the median
-                mask = projections[proj_row, idxs] .< med
+                mask = p .< med
                 # Send points with the projection less than the median to the left child
                 next_level[2*i - 1] = idxs[mask]
                 # Send points with the projection greater than the median to the right child
@@ -87,7 +88,7 @@ function random_projections(T::Type, nvecs::Int, ndims::Int; sparse::Bool=true)
     if sparse
         println("Not implemented")
     else
-        R = randn(T, nvecs, ndims)
+        R = randn(T, ndims, nvecs)
         R ./= sum(R.^2, dims=2) .^ 0.5
     end
     return R::Array{T, 2}
