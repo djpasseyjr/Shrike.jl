@@ -1,5 +1,5 @@
 """
-    traverse_to_leaves(rpf::RPForest{T}, x::Array{T, 2}) -> leaf_idxs
+    traverse_to_leaves(rpf::RPForest{T}, x::Array{T, 2}) where T -> leaf_idxs
 
 Route data point `x` down to a leaf node each tree and return and array of
 indexes of the data stored in each corresponding leaf node
@@ -32,7 +32,7 @@ function traverse_to_leaves(rpf::RPForest{T}, x::Array{T, 2}) where T
 end
 
 """
-    _get_splits(rpf::RPForest{T}, node_idx::Array{Int, 1}) -> splits
+    _get_splits(rpf::RPForest{T}, node_idx::Array{Int, 1}) where T -> splits
 
 Given an array of node indexes of length `rpf.ntrees` corresponding to the
 current index in each tree, return the split values of each node.

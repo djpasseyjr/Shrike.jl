@@ -27,15 +27,15 @@ struct RPForest{T}
 end
 
 """
-    RPForest(data::Array{T, 2}, maxdepth::Int, ntrees::Int) -> ensemble
+    RPForest(data::Array{T, 2}, maxdepth::Int, ntrees::Int) where T -> ensemble
 
 Constructor for ensemble of sparse random projection trees with voting. Follows the
 implementation outlined in:
 
 >**Fast Nearest Neighbor Search through Sparse Random Projections and Voting.**
-Ville Hyvönen, Teemu Pitkänen, Sotirios Tasoulis, Elias Jääsaari, Risto Tuomainen,
-Liang Wang, Jukka Ilmari Corander, Teemu Roos. Proceedings of the 2016 IEEE
-Conference on Big Data (2016)
+>Ville Hyvönen, Teemu Pitkänen, Sotirios Tasoulis, Elias Jääsaari, Risto Tuomainen,
+>Liang Wang, Jukka Ilmari Corander, Teemu Roos. Proceedings of the 2016 IEEE
+>Conference on Big Data (2016)
 """
 function RPForest(data::AbstractArray{T, 2}, maxdepth::Int, ntrees::Int) where T
     # Need depth check
