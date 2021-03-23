@@ -1,5 +1,12 @@
 name: CI
-on: [push, pull_request]
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+    tags: '*'
 jobs:
   test:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
@@ -39,18 +46,23 @@ jobs:
           file: lcov.info
   docs:
     name: Documentation
-    jobs:
-      build:
-        runs-on: ubuntu-latest
-        steps:
-          - uses: actions/checkout@v2
-          - uses: julia-actions/setup-julia@latest
-            with:
-              version: '1'
-          - name: Install dependencies
-            run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
-          - name: Build and deploy
-            env:
-              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # For authentication with GitHub Actions token
-              DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }} # For authentication with SSH deploy key
-            run: julia --project=docs/ docs/make.jl
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: '1'
+      - run: |
+          julia --project=docs -e '
+            using Pkg
+            Pkg.develop(PackageSpec(path=pwd()))
+            Pkg.instantiate()'
+      - run: |
+          julia --project=docs -e '
+            using Documenter: doctest
+            using RPTrees
+            doctest(RPTrees)'
+      - run: julia --project=docs docs/make.jl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
