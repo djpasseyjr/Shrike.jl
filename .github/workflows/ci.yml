@@ -39,7 +39,6 @@ jobs:
           file: lcov.info
   docs:
     name: Documentation
-    on: [push, pull_request]
     jobs:
       build:
         runs-on: ubuntu-latest
@@ -47,7 +46,7 @@ jobs:
           - uses: actions/checkout@v2
           - uses: julia-actions/setup-julia@latest
             with:
-              version: '1.5'
+              version: '1'
           - name: Install dependencies
             run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
           - name: Build and deploy
