@@ -94,10 +94,10 @@ function random_projections(T::Type, nvecs::Int, ndims::Int; sparse::Bool=true)
     return R::Array{T, 2}
 end
 
-function medianperm(x::Array{T, 1}) where T
-    sortidx = sortperm(x)
-    mi = isodd(n) ? n ÷ 2 + 1 : n ÷ 2
-    median = isodd(n) ? dimvals[mi] : (dimvals[mi] + dimvals[mi+1]) / 2
-    lidxs = node.indexes[sortidx][1:mi]
-    ridxs = node.indexes[sortidx][mi+1:end]
-end
+# function medianperm(x::Array{T, 1}) where T
+#     sortidx = sortperm(x)
+#     mi = isodd(n) ? n ÷ 2 + 1 : n ÷ 2
+#     median = isodd(n) ? dimvals[mi] : (dimvals[mi] + dimvals[mi+1]) / 2
+#     lidxs = node.indexes[sortidx][1:mi]
+#     ridxs = node.indexes[sortidx][mi+1:end]
+# end
