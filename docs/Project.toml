@@ -1,0 +1,6 @@
+[deps]
+RPTrees = "e7e127b8-87f2-11eb-1459-934231b01f31"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+
+[compat]
+DocumenterTools = "=0.1.9"
