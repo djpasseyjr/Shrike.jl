@@ -1,4 +1,5 @@
 *.mem
 *.swp
 *.ipynb_checkpoints/
+*.cov
 docs/build/
