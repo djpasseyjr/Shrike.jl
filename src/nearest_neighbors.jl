@@ -38,3 +38,29 @@ Given an array of node indexes of length `rpf.ntrees` corresponding to the
 current index in each tree, return the split values of each node.
 """
 _get_splits(rpf::RPForest{T}, node_idx::Array{Int, 1}) where T = map(i -> rpf.splits[i, node_idx[i]], 1:rpf.ntrees)
+
+vote!(v::Array{Int, 1}, idx::Array{Int, 1}) = v[idx] .+= 1
+
+"""
+    approx_knn(rpf::RPForest{T}, q::Array{T, 2}, k::Int; vote_cutoff=1) where T -> knn_idx
+
+For a query point `q`, find the approximate `k` nearest neighbors from the data stored in the the
+RPForest. The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included in a linear search. Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy.
+
+"""
+function approx_knn(rpf::RPForest{T}, q::Array{T, 2}, k::Int; vote_cutoff=1) where T
+    # Get indexes in leaf nodes corresponding to `q`
+    leaf_idxs = traverse_to_leaves(rpf, q)
+    # Empty array of votes
+    votes = zeros(Int, rpf.npoints)
+    # Each tree votes on candiate nearest neighbors
+    map(idxs -> vote!(votes, idxs), leaf_idxs)
+    # Find candiate points with enough votes
+    vote_mask = votes .>= vote_cutoff
+    candidate_idx = findall(vote_mask)
+    candidates = rpf.data[:, candidate_idx]
+    # Linear search on candidates
+    candidate_dist = pairwise(Euclidean(), candidates, q, dims=2)
+    knn_idx = candidate_idx[sortperm(candidate_dist[:, 1])[1:k]]
+    return knn_idx
+end
