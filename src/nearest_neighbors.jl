@@ -301,10 +301,11 @@ Returns a graph with `rpf.npoints` node and `k * rpf.npoints` edges datapoints c
 
 1. `rpf`: random forest of the desired data
 2. `k`: the desired number of nearest neighbors
-3. `ne_iters`: assigns the number of iterations of neighbor exploration to use. 
+3. `vote_cutoff`: signifies how many "votes" a point needs in order to be included 
+in a linear search through leaf nodes. Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy. Defaults to 1
+4. `ne_iters`: assigns the number of iterations of neighbor exploration to use. Defaults to zero.
 Neighbor exploration is a way to increse knn-graph accuracy.
-4. `vote_cutoff`: signifies how many "votes" a point needs in order to be included 
-in a linear search through leaf nodes. Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy.
+5. `gtype` is the type of graph to construct. Defaults to `SimpleDiGraph`
 
 """
 

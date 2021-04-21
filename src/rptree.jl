@@ -86,11 +86,10 @@ end
 function random_projections(T::Type, nvecs::Int, ndims::Int; sparse::Bool=true)
     # Could use static arrays here
     if sparse
-        println("Not implemented")
-    else
-        R = randn(T, ndims, nvecs)
-        R ./= sum(R.^2, dims=2) .^ 0.5
+        println("RPF with Sparse Arrays is not implemented")
     end
+    R = randn(T, ndims, nvecs)
+    R ./= sum(R.^2, dims=2) .^ 0.5
     return R::Array{T, 2}
 end
 
