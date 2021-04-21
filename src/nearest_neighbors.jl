@@ -236,7 +236,7 @@ function _allknn(rpf::RPForest{T}, k::Int; vote_cutoff=1) where T
 end
 
 """
-    explore!(data::Array{T, 2}, knn::Array{NeighborExplorer{T}, 1}) where T
+    explore!(data::Array{T, 2}, ann::Array{NeighborExplorer{T}, 1}) where T
 
 Explore neighbors of neighbors to improve accuracy of the approximate 
 k-nearest-neigbors stored in `knn`.
@@ -245,11 +245,11 @@ k-nearest-neigbors stored in `knn`.
 
 1. `data` is the array of data. Each column is a data point
 
-2. `knn` is an array of `NeighborExplorer`s where `knn[i]` contains 
+2. `ann` is an array of `NeighborExplorer`s where `ann[i]` contains 
 the current best approximation to the k-nearest-neigbors of point `i`.
 
 """
-function explore!(data::Array{T, 2}, knn::Array{NeighborExplorer{T}, 1}) where T
+function explore!(data::Array{T, 2}, ann::Array{NeighborExplorer{T}, 1}) where T
     m,n = size(data)
     metric = Euclidean()
     @inbounds for i in 1:n
@@ -282,7 +282,7 @@ function allknn(rpf::RPForest{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0) w
     ann = _allknn(rpf, k, vote_cutoff=vote_cutoff)
     # Neighbor exploration
     for i in 1:ne_iters
-        explore!(rpf, ann)
+        explore!(rpf.data, ann)
     end
     # Load neighbor explorers into a matrix
     approxnn = zeros(Int, rpf.npoints, k)
@@ -314,7 +314,7 @@ function knngraph(rpf::RPForest{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0,
     ann = _allknn(rpf, k, vote_cutoff=vote_cutoff)
     # Neighbor exploration
     for i in 1:ne_iters
-        explore!(rpf, ann)
+        explore!(rpf.data, ann)
     end
     # Load neighbor explorers into a sparse adj matrix
     A = spzeros(Int, rpf.npoints, rpf.npoints)
