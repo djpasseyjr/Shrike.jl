@@ -13,7 +13,7 @@ knngraph(rpf::RPForest{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0, gtype::G
 ```
 
 ```@docs
-approx_knn(rpf::RPForest{T}, i::Int, k::Int; vote_cutoff=1) where T
+approx_knn(rpf::RPForest{T}, q::AbstractArray{T, 2}, k::Int; vote_cutoff=1) where T
 ```
 
 ```@docs

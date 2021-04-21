@@ -308,7 +308,6 @@ Neighbor exploration is a way to increse knn-graph accuracy.
 5. `gtype` is the type of graph to construct. Defaults to `SimpleDiGraph`
 
 """
-
 function knngraph(rpf::RPForest{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0, gtype::G=SimpleDiGraph) where {T, G}
     # Search tree via neighbor explorers
     ann = _allknn(rpf, k, vote_cutoff=vote_cutoff)
