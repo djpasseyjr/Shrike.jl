@@ -249,7 +249,7 @@ k-nearest-neigbors stored in `knn`.
 the current best approximation to the k-nearest-neigbors of point `i`.
 
 """
-function explore!(data::Array{T, 2},, knn::Array{NeighborExplorer{T}, 1}) where T
+function explore!(data::Array{T, 2}, knn::Array{NeighborExplorer{T}, 1}) where T
     m,n = size(data)
     metric = Euclidean()
     @inbounds for i in 1:n
@@ -287,7 +287,7 @@ function allknn(rpf::RPForest{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0) w
     # Load neighbor explorers into a matrix
     approxnn = zeros(Int, rpf.npoints, k)
     for (i, ne) in enumerate(ann)
-        approxnn[i, :] = RPTrees.get_idxs(ne) 
+        approxnn[i, :] = get_idxs(ne) 
     end
     return approxnn
 end
@@ -308,7 +308,7 @@ in a linear search through leaf nodes. Increasing `vote_cutoff` speeds up the al
 
 """
 
-function knngraph(rpf::RPForest{T}, k::Int, vote_cutoff; vote_cutoff::Int=1, ne_iters::Int=0, gtype::G=SimpleDiGraph) where {T, G}
+function knngraph(rpf::RPForest{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0, gtype::G=SimpleDiGraph) where {T, G}
     # Search tree via neighbor explorers
     ann = _allknn(rpf, k, vote_cutoff=vote_cutoff)
     # Neighbor exploration

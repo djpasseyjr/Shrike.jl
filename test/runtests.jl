@@ -15,3 +15,14 @@ rpf = RPForest(X, 3, 3)
 for j =1:size(X)[2]
     @assert all(map(idxs -> j in idxs, traverse_to_leaves(rpf, reshape(X[:, j], :, 1))))
 end
+
+k = 10
+npoints = 10000
+X = randn(300, npoints)
+depth = 10
+ntrees = 10
+rpf = RPForest(X, depth, ntrees)
+K = allknn(rpf, k, ne_explore=1)
+@assert all(size(K) .== (npoints, k))
+g = knngraph(rpf, k, ne_explore=1)
+@assert g.ne == k * npoints
