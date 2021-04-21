@@ -22,5 +22,6 @@ X = randn(300, npoints)
 depth = 10
 ntrees = 10
 rpf = RPForest(X, depth, ntrees)
+@assert length(approx_knn(rpf, X[:, 1:1], k; vote_cutoff=1)) == k
 @assert all(size(allknn(rpf, k, ne_iters=1)) .== (npoints, k))
 @assert (knngraph(rpf, k, ne_iters=1)).ne == k * npoints

@@ -163,27 +163,27 @@ function approx_knn(rpf::RPForest{T}, q::AbstractArray{T, 2}, k::Int; vote_cutof
 end
 
 
-"""
-    approx_knn(rpf::RPForest{T}, q::Array{T, 2}, k::Int; vote_cutoff=1) where T -> knn_ne
+# """
+#     approx_knn(rpf::RPForest{T}, q::Array{T, 2}, k::Int; vote_cutoff=1) where T -> knn_ne
 
-Helper function for creating a knn-graph. Instead of returning indexes, returns a 
-`NeighborExplorer` containing the approximate nearest neighbors. 
+# Helper function for creating a knn-graph. Instead of returning indexes, returns a 
+# `NeighborExplorer` containing the approximate nearest neighbors. 
 
-The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included in a linear search. Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy.
-"""
-function approx_knn(rpf::RPForest{T}, i::Int, k::Int; vote_cutoff=1) where T
-    metric = Euclidean()
-    q = @view rpf.data[:, i:i]
-    cand_idx = candidate_idxs(rpf, q, k, vote_cutoff=vote_cutoff)
-    ncand::Int = length(cand_idx)
-    # Linear search on candidates
-    ne = NeighborExplorer{T}(i, k)
-    @inbounds for (i, c) in enumerate(cand_idx)
-        x = @view rpf.data[:, c]
-        push!(ne, c, metric(x, q))
-    end
-    return ne
-end
+# The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included in a linear search. Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy.
+# """
+# function approx_knn(rpf::RPForest{T}, i::Int, k::Int; vote_cutoff=1) where T
+#     metric = Euclidean()
+#     q = @view rpf.data[:, i:i]
+#     cand_idx = candidate_idxs(rpf, q, k, vote_cutoff=vote_cutoff)
+#     ncand::Int = length(cand_idx)
+#     # Linear search on candidates
+#     ne = NeighborExplorer{T}(i, k)
+#     @inbounds for (i, c) in enumerate(cand_idx)
+#         x = @view rpf.data[:, c]
+#         push!(ne, c, metric(x, q))
+#     end
+#     return ne
+# end
 
 """
     vote!(vs::Array{Dict{Int,Int}, 1}, idxs::Array{Int, 1})
