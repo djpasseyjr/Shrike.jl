@@ -287,7 +287,7 @@ function allknn(rpf::RPForest{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0) w
     # Load neighbor explorers into a matrix
     approxnn = zeros(Int, rpf.npoints, k)
     for (i, ne) in enumerate(ann)
-        approxnn[i, :] = get_idxs(ne) 
+        @inbounds approxnn[i, :] = get_idxs(ne) 
     end
     return approxnn
 end
