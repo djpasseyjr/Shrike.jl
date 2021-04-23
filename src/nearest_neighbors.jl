@@ -242,26 +242,23 @@ Explore neighbors of neighbors to improve accuracy of the approximate
 k-nearest-neigbors stored in `knn`.
 
 **Parameters**
-
-1. `data` is the array of data. Each column is a data point
-
-2. `ann` is an array of `NeighborExplorer`s where `ann[i]` contains 
+1. `i` is the current datapoint
+2. `data` is the array of data. Each column is a data point
+3. `ann` is an array of `NeighborExplorer`s where `ann[i]` contains 
 the current best approximation to the k-nearest-neigbors of point `i`.
 
 """
-function explore!(data::Array{T, 2}, ann::Array{NeighborExplorer{T}, 1}) where T
-    m,n = size(data)
-    metric = Euclidean()
-    @inbounds for i in 1:n
-        x = @view data[:, i:i]
-        for j in get_idxs(ann[i])
+function explore(i::Int, data::AbstractArray{T}, ann::Array{NeighborExplorer{T}, 1}) where T
+    x = @view data[:, i:i]
+    new_ann = deepcopy(ann[i])
+    for j in get_idxs(ann[i])
             for l in get_idxs(ann[j])
                 y = @view data[:, l:l]
-                dist = metric(x, y)
-                push!(ann[i], l, dist)
-            end
+                dist = Euclidean()(x, y)
+                push!(new_ann, l, dist)
         end
     end
+    return new_ann
 end
 
 """
@@ -282,7 +279,7 @@ function allknn(rpf::RPForest{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0) w
     ann = _allknn(rpf, k, vote_cutoff=vote_cutoff)
     # Neighbor exploration
     for i in 1:ne_iters
-        explore!(rpf.data, ann)
+        ann = ThreadsX.map(i -> explore(i, rpf.data, ann), 1:rpf.npoints)
     end
     # Load neighbor explorers into a matrix
     approxnn = zeros(Int, rpf.npoints, k)
@@ -290,6 +287,17 @@ function allknn(rpf::RPForest{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0) w
         @inbounds approxnn[i, :] = get_idxs(ne) 
     end
     return approxnn
+end
+
+"""
+    add_edges!(j::Int, annj::NeighborExplorer{T}, A::AbstractArray{U, 2}) where {T, U}
+
+Helper function for multithreading knn-graph adjacency matrix creation
+"""
+function add_edges!(j::Int, annj::NeighborExplorer{T}, A::AbstractArray{U, 2}) where {T, U}
+    @inbounds for i in get_idxs(annj)
+            A[i, j] = 1
+    end
 end
 
 """
@@ -311,17 +319,13 @@ Neighbor exploration is a way to increse knn-graph accuracy.
 function knngraph(rpf::RPForest{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0, gtype::G=SimpleDiGraph) where {T, G}
     # Search tree via neighbor explorers
     ann = _allknn(rpf, k, vote_cutoff=vote_cutoff)
-    # Neighbor exploration
+    # Neighbor exploration (In parallel)
     for i in 1:ne_iters
-        explore!(rpf.data, ann)
+        ann = ThreadsX.map(i -> explore(i, rpf.data, ann), 1:rpf.npoints)
     end
-    # Load neighbor explorers into a sparse adj matrix
+    # Load neighbor explorers into a sparse adj matrix (In parallel)
     A = spzeros(Int, rpf.npoints, rpf.npoints)
-    @inbounds for j in 1:rpf.npoints
-        @inbounds for i in get_idxs(ann[j])
-            A[i, j] = 1
-        end
-    end
+    ThreadX.map((j, annj) -> add_edges!(j, annj, A))
     # Construct graph
     g = gtype(A)
 end
