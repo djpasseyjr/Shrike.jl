@@ -7,7 +7,7 @@ module RPTrees
     using LinearAlgebra
     using StatsBase: median
     using SparseArrays
-    using ThreadX
+    using ThreadsX
 
     include("rptree.jl")
     include("nearest_neighbors.jl")
