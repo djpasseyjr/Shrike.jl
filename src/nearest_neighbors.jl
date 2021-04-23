@@ -325,7 +325,7 @@ function knngraph(rpf::RPForest{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0,
     end
     # Load neighbor explorers into a sparse adj matrix (In parallel)
     A = spzeros(Int, rpf.npoints, rpf.npoints)
-    ThreadsX.map((j, annj) -> add_edges!(j, annj, A))
+    ThreadsX.map((j, annj) -> add_edges!(j, annj, A), 1:rpf.npoints, ann)
     # Construct graph
     g = gtype(A)
 end
