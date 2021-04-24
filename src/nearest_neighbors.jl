@@ -151,17 +151,12 @@ function approx_knn(rpf::RPForest{T}, q::AbstractArray{T, 2}, k::Int; vote_cutof
     cand_idx = candidate_idxs(rpf, q, k, vote_cutoff=vote_cutoff)
     ncand::Int = length(cand_idx)
     # Linear search on candidates
-    cand_dist = zeros(T, ncand)
-    @inbounds for i in 1:ncand
-        x = @view rpf.data[:, i]
-        cand_dist[i] = sqeuclidean(x, q)
-    end
+    cand_dist = ThreadsX.map(x -> sqeuclidean(x, q), @view rpf.data[:, i] for i in cand_idx)
     sp = sortperm(cand_dist)
     knn_idx = [cand_idx[sp[i]] for i=1:k]
     return knn_idx
 end
-
-
+    
 # """
 #     approx_knn(rpf::RPForest{T}, q::Array{T, 2}, k::Int; vote_cutoff=1) where T -> knn_ne
 
@@ -210,7 +205,6 @@ The `vote_cutoff` parameter signifies how many "votes" a point needs in order to
 """
 function _allknn(rpf::RPForest{T}, k::Int; vote_cutoff=1) where T
     votes = [Dict{Int,Int}() for i in 1:rpf.npoints]
-    knn = [NeighborExplorer{T}(i, k) for i in 1:rpf.npoints]
     nleafs = 2^rpf.depth
     for i in 1:rpf.ntrees
         for j in 1:nleafs
@@ -218,7 +212,8 @@ function _allknn(rpf::RPForest{T}, k::Int; vote_cutoff=1) where T
         end
     end
     
-    for i in 1:rpf.npoints
+    knn = ThreadsX.map(1:rpf.npoints) do i
+        ann = NeighborExplorer{T}(i, k)
         nodes = collect(keys(votes[i]))
         distances = zeros(T, length(nodes))
         x = @view rpf.data[:, i]
@@ -226,9 +221,10 @@ function _allknn(rpf::RPForest{T}, k::Int; vote_cutoff=1) where T
             if votes[i][node] > vote_cutoff
                 y = @view rpf.data[:, node]
                 # Should we sort before adding to heap?
-                push!(knn[i], node, sqeuclidean(x,y))
+                push!(ann, node, sqeuclidean(x,y))
             end
         end
+        return ann
     end
     return knn
 end
