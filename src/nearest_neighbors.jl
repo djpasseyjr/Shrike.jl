@@ -148,14 +148,13 @@ RPForest. The `vote_cutoff` parameter signifies how many "votes" a point needs i
 
 """
 function approx_knn(rpf::RPForest{T}, q::AbstractArray{T, 2}, k::Int; vote_cutoff=1) where T
-    metric = Euclidean()
     cand_idx = candidate_idxs(rpf, q, k, vote_cutoff=vote_cutoff)
     ncand::Int = length(cand_idx)
     # Linear search on candidates
     cand_dist = zeros(T, ncand)
     @inbounds for i in 1:ncand
         x = @view rpf.data[:, i]
-        cand_dist[i] = metric(x, q)
+        cand_dist[i] = sqeuclidean(x, q)
     end
     sp = sortperm(cand_dist)
     knn_idx = [cand_idx[sp[i]] for i=1:k]
@@ -210,7 +209,6 @@ and the creation of a knn-graph.
 The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included in a linear search. Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy.
 """
 function _allknn(rpf::RPForest{T}, k::Int; vote_cutoff=1) where T
-    metric = Euclidean()
     votes = [Dict{Int,Int}() for i in 1:rpf.npoints]
     knn = [NeighborExplorer{T}(i, k) for i in 1:rpf.npoints]
     nleafs = 2^rpf.depth
@@ -228,7 +226,7 @@ function _allknn(rpf::RPForest{T}, k::Int; vote_cutoff=1) where T
             if votes[i][node] > vote_cutoff
                 y = @view rpf.data[:, node]
                 # Should we sort before adding to heap?
-                push!(knn[i], node, metric(x,y))
+                push!(knn[i], node, sqeuclidean(x,y))
             end
         end
     end
@@ -254,7 +252,7 @@ function explore(i::Int, data::AbstractArray{T}, ann::Array{NeighborExplorer{T},
     for j in get_idxs(ann[i])
             for l in get_idxs(ann[j])
                 y = @view data[:, l:l]
-                dist = Euclidean()(x, y)
+                dist = sqeuclidean(x, y)
                 push!(new_ann, l, dist)
         end
     end
