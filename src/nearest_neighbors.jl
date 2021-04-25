@@ -218,9 +218,8 @@ function _allknn(rpf::RPForest{T}, k::Int; vote_cutoff=1) where T
         distances = zeros(T, length(nodes))
         x = @view rpf.data[:, i]
         for node in nodes
-            if votes[i][node] > vote_cutoff
+            if votes[i][node] >= vote_cutoff
                 y = @view rpf.data[:, node]
-                # Should we sort before adding to heap?
                 push!(ann, node, sqeuclidean(x,y))
             end
         end
