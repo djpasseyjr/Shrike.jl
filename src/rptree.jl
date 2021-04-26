@@ -84,10 +84,8 @@ function Base.show(io::IO, rpf::RPForest)
 end
 
 function random_projections(T::Type, nvecs::Int, ndims::Int; sparse::Bool=true)
-    # Could use static arrays here
-    if sparse
-        println("RPF with Sparse Arrays is not implemented")
-    end
+    # Sparse arrays are not implemented because sparse x dense matmul 
+    # was slower than dense x dense matmul when I benchmarked it
     R = randn(T, ndims, nvecs)
     R ./= sum(R.^2, dims=2) .^ 0.5
     return R::Array{T, 2}

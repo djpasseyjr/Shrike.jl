@@ -133,7 +133,7 @@ function candidate_idxs(rpf::RPForest{T}, q::AbstractArray{T, 2}, k::Int; vote_c
     # Empty array of votes
     votes = zeros(Int, rpf.npoints)
     # Each tree votes on candiate nearest neighbors
-    map(idxs -> vote!(votes, idxs), leaf_idxs)
+    ThreadsX.map(idxs -> vote!(votes, idxs), leaf_idxs)
     # Find candiate points with enough votes
     vote_mask = votes .>= vote_cutoff
     cand_idx::Array{Int, 1} = findall(vote_mask)
@@ -149,9 +149,7 @@ RPForest. The `vote_cutoff` parameter signifies how many "votes" a point needs i
 """
 function approx_knn(rpf::RPForest{T}, q::AbstractArray{T, 2}, k::Int; vote_cutoff=1) where T
     cand_idx = candidate_idxs(rpf, q, k, vote_cutoff=vote_cutoff)
-    ncand::Int = length(cand_idx)
-    # Linear search on candidates (Not sure if threading is faster as written here)
-    
+    ncand::Int = length(cand_idx)    
     cand_dist = ThreadsX.map(i -> disttopoint(i, q, rpf.data), cand_idx)
     sp = sortperm(cand_dist)
     knn_idx = [cand_idx[sp[i]] for i=1:k]
