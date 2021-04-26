@@ -160,7 +160,7 @@ end
 
 """ Distance between points in a set (Helper function for threading)
 """
-function disttopoint(i::Int, q::Array{T, 2}, X::Array{T, 2}) where T
+function disttopoint(i::Int, q::AbstractArray{T, 2}, X::AbstractArray{T, 2}) where T
     x = @view X[:, i]
     return sqeuclidean(x, q)
 end
