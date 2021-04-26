@@ -150,11 +150,19 @@ RPForest. The `vote_cutoff` parameter signifies how many "votes" a point needs i
 function approx_knn(rpf::RPForest{T}, q::AbstractArray{T, 2}, k::Int; vote_cutoff=1) where T
     cand_idx = candidate_idxs(rpf, q, k, vote_cutoff=vote_cutoff)
     ncand::Int = length(cand_idx)
-    # Linear search on candidates
-    cand_dist = ThreadsX.map(x -> sqeuclidean(x, q), @view rpf.data[:, i] for i in cand_idx)
+    # Linear search on candidates (Not sure if threading is faster as written here)
+    
+    cand_dist = ThreadsX.map(i -> disttopoint(i, q, rpf.data), cand_idx)
     sp = sortperm(cand_dist)
     knn_idx = [cand_idx[sp[i]] for i=1:k]
     return knn_idx
+end
+
+""" Distance between points in a set (Helper function for threading)
+"""
+function disttopoint(i::Int, q::Array{T, 2}, X::Array{T, 2}) where T
+    x = @view X[:, i]
+    return sqeuclidean(x, q)
 end
     
 # """
