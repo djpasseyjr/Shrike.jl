@@ -3,6 +3,8 @@
 [![codecov](https://codecov.io/gh/djpasseyjr/RPTrees.jl/branch/main/graph/badge.svg?token=S7PNXQOLQK)](https://codecov.io/gh/djpasseyjr/RPTrees.jl)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://djpasseyjr.github.io/RPTrees.jl/dev)
 
+![Random Projection Splits](https://github.com/djpasseyjr/RPTrees.jl/raw/main/docs/src/images/rppartition.png)
+
 `RPTrees` is a Julia package for building ensembles of random projection trees. Random projection trees are a generalization of KD-Trees and are used to quickly approximate nearest neighbors or build k-nearest-neighbor graphs. They [conform to low dimensionality](https://cseweb.ucsd.edu/~dasgupta/papers/rptree-stoc.pdf) that is often present in high dimensional data.
 
 The implementation here is based on the [MRPT algorithm](https://helda.helsinki.fi//bitstream/handle/10138/301147/Hyvonen_Pitkanen_2016_Fast_Nearest.pdf?sequence=1). This package also includes optimizations for knn-graph creation and has built-in support for multithreading.
