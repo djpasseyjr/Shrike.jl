@@ -26,6 +26,7 @@ Pkg.add(path="https://github.com/djpasseyjr/RPTrees.jl")
 To build an ensemble of random projection trees use the `RPForest` type.
 
 ```jl
+using RPTrees
 X = rand(100, 10000)
 rpf = RPForest(X; depth=6, ntrees=5)
 ```
@@ -52,6 +53,7 @@ Nearest neighbor graphs are used to give a sparse topology to large datasets. Th
 To generate nearest neighbor graphs:
 
 ```jl
+using RPTrees
 X = rand(100, 10000)
 rpf = RPForest(X; depth=6, ntrees=5)
 k = 10
