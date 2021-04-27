@@ -1,5 +1,5 @@
 using RPTrees
-using RPTrees: traverse_to_leaves, getdepth, leafsize, _allknn
+using RPTrees: traverse_to_leaves, getdepth, leafsize, _allknn, get_dists
 using Test
 
 @testset "Constructor" begin
@@ -38,6 +38,6 @@ end
     npoints = 1010
     X = randn(10, npoints)
     @test leafsize(RPForest(X, depth=getdepth(l, 100))) >= l
-    ne = _allknn(rpf, k)
+    ne = _allknn(RPForest(X, ntrees=2), k)
     @test length(get_dists(ne[1])) == k
 end
