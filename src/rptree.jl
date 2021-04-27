@@ -27,7 +27,7 @@ struct RPForest{T}
 end
 
 """
-    RPForest(data::Array{T, 2}, maxdepth::Int, ntrees::Int) where T -> ensemble
+    RPForest(data::Array{T, 2}, depth::Int, ntrees::Int) where T -> ensemble
 
 Constructor for ensemble of sparse random projection trees with voting. Follows the
 implementation outlined in:
@@ -37,23 +37,23 @@ implementation outlined in:
 >Liang Wang, Jukka Ilmari Corander, Teemu Roos. Proceedings of the 2016 IEEE
 >Conference on Big Data (2016)
 """
-function RPForest(data::AbstractArray{T, 2}, maxdepth::Int, ntrees::Int) where T
+function RPForest(data::AbstractArray{T, 2}, depth::Int, ntrees::Int) where T
     # Need depth check
     ndims, npoints = size(data)
     sparse_vecs::Bool = ndims > 500
-    random_vectors = random_projections(T, maxdepth*ntrees, ndims, sparse = sparse_vecs)
-    nsplits = 2^maxdepth -1 # Number of splits in the tree (Same as number of non-leaf nodes)
+    random_vectors = random_projections(T, depth*ntrees, ndims, sparse = sparse_vecs)
+    nsplits = 2^depth -1 # Number of splits in the tree (Same as number of non-leaf nodes)
     splits = zeros(T, ntrees, nsplits) # Array for storing hyperplane split values
     projections = transpose(data) * random_vectors  # projection[i, j] = the projection of point i onto the jth random vector
-    nleafs = 2^maxdepth
+    nleafs = 2^depth
     leaf_node_data_idxs = Array{Array{Int, 1}, 2}(undef, nleafs, ntrees) # Array for storing data indexes at the leaf
 
     for t in 1:ntrees
         prev_level = [collect(1:npoints)]
         next_level = Array{Array{Int, 1}, 2}(undef, 2, 1)
         next_split_idx = 1
-        for d in 1:maxdepth
-            proj_row = (t-1)*maxdepth + d # Current row of projection values
+        for d in 1:depth
+            proj_row = (t-1)*depth + d # Current row of projection values
             for i in 1:length(prev_level)
                 idxs = prev_level[i]
                 # Compute median value of the projection of all current datapoints
@@ -75,8 +75,10 @@ function RPForest(data::AbstractArray{T, 2}, maxdepth::Int, ntrees::Int) where T
         leaf_node_data_idxs[:, t] = prev_level
     end
 
-    return RPForest(data, npoints, ndims, maxdepth, ntrees, random_vectors, splits, leaf_node_data_idxs)
+    return RPForest(data, npoints, ndims, depth, ntrees, random_vectors, splits, leaf_node_data_idxs)
 end
+
+RPForest(data::AbstractArray{T, 2}; depth::Int=4, ntrees::Int=5) where T = RPForest(data, depth, ntrees)
 
 function Base.show(io::IO, rpf::RPForest)
     descr = "RPForest: \n    $(rpf.ntrees) trees \n    $(rpf.npoints) datapoints \n    Depth $(rpf.depth)"
@@ -85,16 +87,8 @@ end
 
 function random_projections(T::Type, nvecs::Int, ndims::Int; sparse::Bool=true)
     # Sparse arrays are not implemented because sparse x dense matmul 
-    # was slower than dense x dense matmul when I benchmarked it
+    # was slower than dense x dense matmul when benchmarked
     R = randn(T, ndims, nvecs)
     R ./= sum(R.^2, dims=2) .^ 0.5
     return R::Array{T, 2}
 end
-
-# function medianperm(x::Array{T, 1}) where T
-#     sortidx = sortperm(x)
-#     mi = isodd(n) ? n ÷ 2 + 1 : n ÷ 2
-#     median = isodd(n) ? dimvals[mi] : (dimvals[mi] + dimvals[mi+1]) / 2
-#     lidxs = node.indexes[sortidx][1:mi]
-#     ridxs = node.indexes[sortidx][mi+1:end]
-# end

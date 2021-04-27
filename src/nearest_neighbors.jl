@@ -5,7 +5,6 @@ Route data point `x` down to a leaf node each tree and return and array of
 indexes of the data stored in each corresponding leaf node
 """
 function traverse_to_leaves(rpf::RPForest{T}, x::AbstractArray{T, 2}) where T
-    #TODO Dispatch on shape of x?
     # Compute all needed projections
     proj::Array{T, 1} = reshape(transpose(x) * rpf.random_vectors, :)
     # Initial node indexes (Root index for each tree)
@@ -31,6 +30,8 @@ function traverse_to_leaves(rpf::RPForest{T}, x::AbstractArray{T, 2}) where T
     return leaf_idxs
 end
 
+traverse_to_leaves(rpf::RPForest{T}, x::AbstractArray{T, 1}) where T = traverse_to_leaves(rpf, reshape(x, :, 1))
+
 """
     _get_splits(rpf::RPForest{T}, node_idx::Array{Int, 1}) where T -> splits
 
@@ -38,6 +39,21 @@ Given an array of node indexes of length `rpf.ntrees` corresponding to the
 current index in each tree, return the split values of each node.
 """
 _get_splits(rpf::RPForest{T}, node_idx::Array{Int, 1}) where T = map(i -> rpf.splits[i, node_idx[i]], 1:rpf.ntrees)
+
+"""
+    leafsize(rpf::RPForest) -> ls
+
+Return the minimum number of points in the leaf nodes
+"""
+leafsize(rpf::RPForest) = floor(Int, rpf.npoints / 2^rpf.depth)
+
+"""
+    getdepth(leafsize::Int, npoints::Int) -> d
+
+Returns the depth needed for the tree to have approximately `leafsize` points in the
+leaf nodes.
+"""
+getdepth(leafsize::Int, npoints::Int) = floor(Int, log(2, npoints) - log(2, leafsize))
 
 mutable struct NeighborExplorer{T}
     k::Int
@@ -121,13 +137,13 @@ end
 vote!(v::Array{Int, 1}, idx::Array{Int, 1}) = v[idx] .+= 1
 
 """
-    candidate_idxs(rpf::RPForest{T}, q::Array{T, 2}, k::Int; vote_cutoff=1) where T -> cand_idx
+    candidate_idxs(rpf::RPForest{T}, q::Array{T, N}, k::Int; vote_cutoff=1) where {T, N} -> cand_idx
 
 Each RP-Tree in the `RPForest` "votes" for nearest neighbor candidates. All points that receive 
 more than `vote_cutoff` votes are returned. By default `vote_cutoff=1` and this returns 
 the set union of all RP-Tree leaf nodes in the ensemble. This is the standard RP-Tree algorithm.
 """
-function candidate_idxs(rpf::RPForest{T}, q::AbstractArray{T, 2}, k::Int; vote_cutoff=1) where T
+function candidate_idxs(rpf::RPForest{T}, q::AbstractArray{T, N}, k::Int; vote_cutoff=1) where {T, N}
     # Get indexes in leaf nodes corresponding to `q`
     leaf_idxs = traverse_to_leaves(rpf, q)
     # Empty array of votes
@@ -147,7 +163,7 @@ For a query point `q`, find the approximate `k` nearest neighbors from the data 
 RPForest. The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included in a linear search. Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy.
 
 """
-function approx_knn(rpf::RPForest{T}, q::AbstractArray{T, 2}, k::Int; vote_cutoff=1) where T
+function approx_knn(rpf::RPForest{T}, q::AbstractArray{T, N}, k::Int; vote_cutoff=1) where {T, N}
     cand_idx = candidate_idxs(rpf, q, k, vote_cutoff=vote_cutoff)
     ncand::Int = length(cand_idx)    
     cand_dist = ThreadsX.map(i -> disttopoint(i, q, rpf.data), cand_idx)
@@ -158,32 +174,10 @@ end
 
 """ Distance between points in a set (Helper function for threading)
 """
-function disttopoint(i::Int, q::AbstractArray{T, 2}, X::AbstractArray{T, 2}) where T
+function disttopoint(i::Int, q::AbstractArray{T, N}, X::AbstractArray{T, 2}) where {T, N}
     x = @view X[:, i]
     return sqeuclidean(x, q)
 end
-    
-# """
-#     approx_knn(rpf::RPForest{T}, q::Array{T, 2}, k::Int; vote_cutoff=1) where T -> knn_ne
-
-# Helper function for creating a knn-graph. Instead of returning indexes, returns a 
-# `NeighborExplorer` containing the approximate nearest neighbors. 
-
-# The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included in a linear search. Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy.
-# """
-# function approx_knn(rpf::RPForest{T}, i::Int, k::Int; vote_cutoff=1) where T
-#     metric = Euclidean()
-#     q = @view rpf.data[:, i:i]
-#     cand_idx = candidate_idxs(rpf, q, k, vote_cutoff=vote_cutoff)
-#     ncand::Int = length(cand_idx)
-#     # Linear search on candidates
-#     ne = NeighborExplorer{T}(i, k)
-#     @inbounds for (i, c) in enumerate(cand_idx)
-#         x = @view rpf.data[:, c]
-#         push!(ne, c, metric(x, q))
-#     end
-#     return ne
-# end
 
 """
     vote!(vs::Array{Dict{Int,Int}, 1}, idxs::Array{Int, 1})
@@ -248,7 +242,7 @@ the current best approximation to the k-nearest-neigbors of point `i`.
 
 """
 function explore(i::Int, data::AbstractArray{T}, ann::Array{NeighborExplorer{T}, 1}) where T
-    x = @view data[:, i:i]
+    x = @view data[:, i]
     new_ann = deepcopy(ann[i])
     for j in get_idxs(ann[i])
             for l in get_idxs(ann[j])
@@ -312,7 +306,7 @@ Returns a graph with `rpf.npoints` node and `k * rpf.npoints` edges datapoints c
 in a linear search through leaf nodes. Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy. Defaults to 1
 4. `ne_iters`: assigns the number of iterations of neighbor exploration to use. Defaults to zero.
 Neighbor exploration is a way to increse knn-graph accuracy.
-5. `gtype` is the type of graph to construct. Defaults to `SimpleDiGraph`
+5. `gtype` is the type of graph to construct. Defaults to `SimpleDiGraph`. `gtype=identity` returns a sparse adjacency matrix.
 
 """
 function knngraph(rpf::RPForest{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0, gtype::G=SimpleDiGraph) where {T, G}
