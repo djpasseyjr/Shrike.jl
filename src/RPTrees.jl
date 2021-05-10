@@ -12,6 +12,6 @@ module RPTrees
     include("rptree.jl")
     include("nearest_neighbors.jl")
 
-    export RPForest, traverse_to_leaves, approx_knn, knngraph, allknn
+    export RPForest, traverse_to_leaves, ann, knngraph, allknn
 
 end  # module RPTrees

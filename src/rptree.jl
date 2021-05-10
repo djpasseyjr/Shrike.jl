@@ -1,9 +1,21 @@
+struct RPForest{T <: AbstractFloat}
+    data::Array{T, 2}
+    npoints::Int
+    ndims::Int
+    depth::Int
+    ntrees::Int
+    random_vectors::Array{T, 2}
+    splits::Array{T, 2}
+    indexes::Array{Array{Int,1}, 2}
+end
+
 """
-    RPForest{T}
+    RPForest(data::Array{T, 2}, depth::Int, ntrees::Int) where T -> ensemble
 
-Multiple random projection tree type.
+Constructor for ensemble of sparse random projection trees with voting. Returns `RPForest` type.
+(An ensemble of multiple random projection trees.)
 
-**Fields**
+** Type Fields**
 * `data::Array{T, 2}`: Contains all data points
 * `npoints::Int`: Number of data points
 * `ndims::Int`: Dimensionality of the data
@@ -13,24 +25,7 @@ Multiple random projection tree type.
 * `splits::Array{T, 2}`: The split values for each node in each tree stored in a 2D array
 * `indexes::Array{Array{Int,1}, 2}`: 2D array of datapoint indexes at each leaf node in each tree.
 Note that RP forest does not store indexes at non-leaf nodes.
-"""
-
-struct RPForest{T}
-    data::AbstractArray{T, 2}
-    npoints::Int
-    ndims::Int
-    depth::Int
-    ntrees::Int
-    random_vectors::AbstractArray{T, 2}
-    splits::AbstractArray{T, 2}
-    indexes::Array{Array{Int,1}, 2}
-end
-
-"""
-    RPForest(data::Array{T, 2}, depth::Int, ntrees::Int) where T -> ensemble
-
-Constructor for ensemble of sparse random projection trees with voting. Follows the
-implementation outlined in:
+Follows the implementation outlined in:
 
 >**Fast Nearest Neighbor Search through Sparse Random Projections and Voting.**
 >Ville Hyvönen, Teemu Pitkänen, Sotirios Tasoulis, Elias Jääsaari, Risto Tuomainen,
@@ -38,8 +33,11 @@ implementation outlined in:
 >Conference on Big Data (2016)
 """
 function RPForest(data::AbstractArray{T, 2}, depth::Int, ntrees::Int) where T
-    # Need depth check
     ndims, npoints = size(data)
+    maxdepth = floor(Int, log(2.0, npoints) - log(2.0, 1))
+    if depth > maxdepth
+        depth = maxdepth
+    end
     sparse_vecs::Bool = ndims > 500
     random_vectors = random_projections(T, depth*ntrees, ndims, sparse = sparse_vecs)
     nsplits = 2^depth -1 # Number of splits in the tree (Same as number of non-leaf nodes)
@@ -80,15 +78,40 @@ end
 
 RPForest(data::AbstractArray{T, 2}; depth::Int=4, ntrees::Int=5) where T = RPForest(data, depth, ntrees)
 
+"""
+    RPForest(data::AbstractArray{T, 2}; depth::Int=4, ntrees::Int=5, k) -> rpf
+
+Keyword argument version of the constructor. The argument `k` is the intended
+number of nearest neighbors that you will be approximating. Passing `k` will
+ensure that there are enough points in the leaf nodes.
+"""
+function RPForest(data::AbstractArray{T, 2}, k::Int; depth::Int=4, ntrees::Int=5) where T
+    m, n = size(data)
+    maxdepth = floor(Int, log(2, n) - log(2, k))
+    if depth > maxdepth
+        safedepth = maxdepth
+    else
+        safedepth = depth
+    end
+    return RPForest(data, safedepth, ntrees)
+end
+
 function Base.show(io::IO, rpf::RPForest)
     descr = "RPForest: \n    $(rpf.ntrees) trees \n    $(rpf.npoints) datapoints \n    Depth $(rpf.depth)"
     print(io, descr)
 end
 
 function random_projections(T::Type, nvecs::Int, ndims::Int; sparse::Bool=true)
-    # Sparse arrays are not implemented because sparse x dense matmul 
-    # was slower than dense x dense matmul when benchmarked
-    R = randn(T, ndims, nvecs)
-    R ./= sum(R.^2, dims=2) .^ 0.5
+    # Sparse arrays are not implemented because sparse x dense matmul
+    # was slower than dense x dense matmul when benchmarked.
+    # Additionally, I'm not sure how to use sparse arrays and still
+    # be type stable.
+    # a::Float64 = 1. / √ ndims
+    # if sparse
+    #     R = sprand(ndims, nvecs, a)
+    # else
+        R = randn(T, ndims, nvecs)
+        R ./= sum(R.^2, dims=2) .^ 0.5
+    # end
     return R::Array{T, 2}
 end
