@@ -83,15 +83,26 @@ To see this at work, consider a small scale example:
 ```console
 user@sys:~$ cmd="using RPTrees; rpf=RPForest(rand(100, 10000)); @time knngraph(rpf, 10, ne_iters=1)"
 user@sys:~$ julia -e "$cmd"
-29.422300 seconds (140.91 M allocations: 8.520 GiB, 5.86% gc time)
-user@sys:~$ julia -e --threads 4 "$cmd"
-15.212044 seconds (141.42 M allocations: 8.840 GiB, 5.98% gc time)
+  12.373127 seconds (8.66 M allocations: 4.510 GiB, 6.85% gc time, 18.88% compilation time)
+user@sys:~$ julia  --threads 4 -e "$cmd"
+  6.306410 seconds (8.67 M allocations: 4.498 GiB, 13.12% gc time, 31.64% compilation time)
 ```
 (This assumes that `RPTrees` is installed.)
 
 ## Benchmarks
 
-![Benchmark Plot](images/benchplot.png)
+
+This package was compared to the original [`mrpt`](https://github.com/vioshyvo/mrpt) C++ implementation (on which this algorithm was based), [`annoy`](https://github.com/spotify/annoy), a popular package for approximate nearest neighbors, and `NearestNeighbors.jl`, a Julia package for nearest neighbor search. The benchmarks were written in the spirit of [`ann-benchmarks`](https://github.com/erikbern/ann-benchmarks), a repository for comparing different approximate nearest neighbor algorithms. The datasets used for the benchmark were taken from [`ann-benchmarks`]. The following are links to the HDF5 files in question: [FashionMNIST](http://ann-benchmarks.com/fashion-mnist-784-euclidean.hdf5), [SIFT](http://ann-benchmarks.com/sift-128-euclidean.hdf5), [MNIST](http://ann-benchmarks.com/mnist-784-euclidean.hdf5) and [GIST](http://ann-benchmarks.com/gist-960-euclidean.hdf5). The following benchmarks were run on a compute cluster, restricting all algorithms to a single thread.
+
+![FashionMNIST Speed Comparison](https://github.com/djpasseyjr/RPTrees.jl/raw/main/docs/src/images/fashionmnist_bm.png)
+
+In this plot, up and to the right is better. (Faster queries, better recall). Each point represents a parameter combination. For a full documentation of parameters run and timing methods consult the original scripts located in the `benchmark/` directory.
+
+This plot illustrates how for this dataset, on most parameter combinations, `RPTrees` has better preformance. Compared to SIFT, below, where some parameter combinations are not as strong. We speculate that this has to do with the high dimensionality of points in FashionMNIST (d=784), compared to the lower dimensionality of SIFT (d=128).
+
+![SIFT Speed Comparison](https://github.com/djpasseyjr/RPTrees.jl/raw/main/docs/src/images/sift_bm.png)
+
+The takeaway here is that `RPTrees` is fast! It is possibly a little faster than the original C++ implementation. Go Julia! We should note, that `RPTrees` was not benchmarked against state of the art algorithms for approximate nearest neighbor search. These algorithms are faster than `annoy` and `mrpt`, but unfortunately, the developers of `RPTrees` don't know much else about them.
 
 ## Function Documentation
 
