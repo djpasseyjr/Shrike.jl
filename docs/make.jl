@@ -1,8 +1,8 @@
-using Documenter, RPTrees
+using Documenter, Shrike
 push!(LOAD_PATH,"../src/")
 
-makedocs(sitename="RPTrees.jl Documentation")
+makedocs(sitename="Shrike.jl Documentation")
 deploydocs(
-    repo = "github.com/djpasseyjr/RPTrees.jl.git",
+    repo = "github.com/djpasseyjr/Shrike.jl.git",
     devbranch = "main"
 )

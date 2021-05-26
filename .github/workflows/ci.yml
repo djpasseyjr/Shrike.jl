@@ -59,8 +59,8 @@ jobs:
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.instantiate()
             using Documenter: doctest
-            using RPTrees
-            doctest(RPTrees)'
+            using Shrike
+            doctest(Shrike)'
       - name: Build and deploy
         run: julia --project=docs docs/make.jl
         env:

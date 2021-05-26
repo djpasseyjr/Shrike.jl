@@ -127,9 +127,9 @@ uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 deps = ["InteractiveUtils", "Markdown", "Sockets"]
 uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 
-[[RPTrees]]
+[[Shrike]]
 deps = ["AbstractTrees", "Distances", "Documenter", "LinearAlgebra", "NearestNeighbors", "StatsBase"]
-path = "/Users/djpassey/Code/RPTrees.jl"
+path = "/Users/djpassey/Code/Shrike.jl"
 uuid = "e7e127b8-87f2-11eb-1459-934231b01f31"
 version = "0.1.0"
 

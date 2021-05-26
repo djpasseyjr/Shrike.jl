@@ -1,4 +1,4 @@
-module RPTrees
+module Shrike
 
     using AbstractTrees
     using DataStructures
@@ -9,9 +9,9 @@ module RPTrees
     using SparseArrays
     using ThreadsX
 
-    include("rptree.jl")
+    include("shrike_index.jl")
     include("nearest_neighbors.jl")
 
-    export RPForest, traverse_to_leaves, ann, knngraph, allknn
+    export ShrikeIndex, traverse_to_leaves, ann, knngraph, allknn
 
-end  # module RPTrees
+end  # module Shrike

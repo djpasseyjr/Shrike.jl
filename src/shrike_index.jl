@@ -1,4 +1,4 @@
-struct RPForest{T <: AbstractFloat}
+struct ShrikeIndex{T <: AbstractFloat}
     data::Array{T, 2}
     npoints::Int
     ndims::Int
@@ -10,9 +10,9 @@ struct RPForest{T <: AbstractFloat}
 end
 
 """
-    RPForest(data::Array{T, 2}, depth::Int, ntrees::Int) where T -> ensemble
+    ShrikeIndex(data::Array{T, 2}, depth::Int, ntrees::Int) where T -> ensemble
 
-Constructor for ensemble of sparse random projection trees with voting. Returns `RPForest` type.
+Constructor for ensemble of sparse random projection trees with voting. Returns `ShrikeIndex` type.
 (An ensemble of multiple random projection trees.)
 
 ** Type Fields**
@@ -32,7 +32,7 @@ Follows the implementation outlined in:
 >Liang Wang, Jukka Ilmari Corander, Teemu Roos. Proceedings of the 2016 IEEE
 >Conference on Big Data (2016)
 """
-function RPForest(data::AbstractArray{T, 2}, depth::Int, ntrees::Int) where T
+function ShrikeIndex(data::AbstractArray{T, 2}, depth::Int, ntrees::Int) where T
     ndims, npoints = size(data)
     maxdepth = floor(Int, log(2.0, npoints) - log(2.0, 1))
     if depth > maxdepth
@@ -73,19 +73,19 @@ function RPForest(data::AbstractArray{T, 2}, depth::Int, ntrees::Int) where T
         leaf_node_data_idxs[:, t] = prev_level
     end
 
-    return RPForest(data, npoints, ndims, depth, ntrees, random_vectors, splits, leaf_node_data_idxs)
+    return ShrikeIndex(data, npoints, ndims, depth, ntrees, random_vectors, splits, leaf_node_data_idxs)
 end
 
-RPForest(data::AbstractArray{T, 2}; depth::Int=4, ntrees::Int=5) where T = RPForest(data, depth, ntrees)
+ShrikeIndex(data::AbstractArray{T, 2}; depth::Int=4, ntrees::Int=5) where T = ShrikeIndex(data, depth, ntrees)
 
 """
-    RPForest(data::AbstractArray{T, 2}; depth::Int=4, ntrees::Int=5, k) -> rpf
+    ShrikeIndex(data::AbstractArray{T, 2}; depth::Int=4, ntrees::Int=5, k) -> rpf
 
 Keyword argument version of the constructor. The argument `k` is the intended
 number of nearest neighbors that you will be approximating. Passing `k` will
 ensure that there are enough points in the leaf nodes.
 """
-function RPForest(data::AbstractArray{T, 2}, k::Int; depth::Int=4, ntrees::Int=5) where T
+function ShrikeIndex(data::AbstractArray{T, 2}, k::Int; depth::Int=4, ntrees::Int=5) where T
     m, n = size(data)
     maxdepth = floor(Int, log(2, n) - log(2, k))
     if depth > maxdepth
@@ -93,11 +93,11 @@ function RPForest(data::AbstractArray{T, 2}, k::Int; depth::Int=4, ntrees::Int=5
     else
         safedepth = depth
     end
-    return RPForest(data, safedepth, ntrees)
+    return ShrikeIndex(data, safedepth, ntrees)
 end
 
-function Base.show(io::IO, rpf::RPForest)
-    descr = "RPForest: \n    $(rpf.ntrees) trees \n    $(rpf.npoints) datapoints \n    Depth $(rpf.depth)"
+function Base.show(io::IO, rpf::ShrikeIndex)
+    descr = "ShrikeIndex: \n    $(rpf.ntrees) trees \n    $(rpf.npoints) datapoints \n    Depth $(rpf.depth)"
     print(io, descr)
 end
 

@@ -1,8 +1,8 @@
-# RPTrees.jl
+# Shrike.jl
 
-![Random Projection Splits](https://github.com/djpasseyjr/RPTrees.jl/raw/main/docs/src/images/rppartition.png)
+![Random Projection Splits](https://github.com/djpasseyjr/Shrike.jl/raw/main/docs/src/images/rppartition.png)
 
-`RPTrees` is a Julia package for building ensembles of random projection trees. Random projection trees are a generalization of KD-Trees and are used to quickly approximate nearest neighbors or build k-nearest-neighbor graphs. They [conform to low dimensionality](https://cseweb.ucsd.edu/~dasgupta/papers/rptree-stoc.pdf) that is often present in high dimensional data.
+`Shrike` is a Julia package for building ensembles of random projection trees. Random projection trees are a generalization of KD-Trees and are used to quickly approximate nearest neighbors or build k-nearest-neighbor graphs. They [conform to low dimensionality](https://cseweb.ucsd.edu/~dasgupta/papers/rptree-stoc.pdf) that is often present in high dimensional data.
 
 The implementation here is based on the [MRPT algorithm](https://helda.helsinki.fi//bitstream/handle/10138/301147/Hyvonen_Pitkanen_2016_Fast_Nearest.pdf?sequence=1). This package also includes optimizations for knn-graph creation and has built-in support for multithreading.
 
@@ -11,26 +11,26 @@ The implementation here is based on the [MRPT algorithm](https://helda.helsinki.
 To install just type
 
 ```jl
-] add https://github.com/djpasseyjr/RPTrees.jl
+] add https://github.com/djpasseyjr/Shrike.jl
 ```
 
-in the REPL or 
+in the REPL or
 
-```jl 
+```jl
 using Pkg
-Pkg.add(path="https://github.com/djpasseyjr/RPTrees.jl")
+Pkg.add(path="https://github.com/djpasseyjr/Shrike.jl")
 ```
 
 ## Build an Index
 
-To build an ensemble of random projection trees use the `RPForest` type.
+To build an ensemble of random projection trees use the `ShrikeIndex` type.
 
 ```jl
-using RPTrees
+using Shrike
 X = rand(100, 10000)
-rpf = RPForest(X; depth=6, ntrees=5)
+rpf = ShrikeIndex(X; depth=6, ntrees=5)
 ```
-The type accepts a matrix of data, `X` where each column represents a datapoint. 
+The type accepts a matrix of data, `X` where each column represents a datapoint.
 
 1. `depth` describes the number of times each random projection tree will split the data. Leaf nodes in the tree contain `npoints / 2^depth` data points. Increasing `depth` increases speed but decreases accuracy.
 2. `ntrees` controls the number of trees in the ensemble. More trees means more accuracy but more memory.
@@ -42,7 +42,7 @@ q = X[:, 1]
 ann = approx_knn(rpf, q, k; vote_cutoff=2)
 ```
 
-1. The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included in a linear search. Each tree "votes" for the points a leaf node, so if there aren't many point in the leaves and there aren't many trees, the odds of a point receiving more than one vote is low.  Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy. When `depth` is large and `ntrees` is less than 5, it is reccomended to set `vote_cutoff = 1`. 
+1. The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included in a linear search. Each tree "votes" for the points a leaf node, so if there aren't many point in the leaves and there aren't many trees, the odds of a point receiving more than one vote is low.  Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy. When `depth` is large and `ntrees` is less than 5, it is reccomended to set `vote_cutoff = 1`.
 
 ## KNN-Graphs
 
@@ -53,9 +53,9 @@ Nearest neighbor graphs are used to give a sparse topology to large datasets. Th
 To generate nearest neighbor graphs:
 
 ```jl
-using RPTrees
+using Shrike
 X = rand(100, 10000)
-rpf = RPForest(X; depth=6, ntrees=5)
+rpf = ShrikeIndex(X; depth=6, ntrees=5)
 k = 10
 g = knngraph(rpf, k; vote_cutoff=1, ne_iters=1, gtype=SimpleDiGraph)
 ```
@@ -73,7 +73,7 @@ can be used to generate an `rpf.npoints`x`k` array of integer indexes where `nn[
 
 ## Threading
 
-`RPTrees` has built in support for multithreading. To allocate multiple threads, start `julia` with the `--threads` flag:
+`Shrike` has built in support for multithreading. To allocate multiple threads, start `julia` with the `--threads` flag:
 
 ```console
 user@sys:~$ julia --threads 4
@@ -81,43 +81,43 @@ user@sys:~$ julia --threads 4
 
 To see this at work, consider a small scale example:
 ```console
-user@sys:~$ cmd="using RPTrees; rpf=RPForest(rand(100, 10000)); @time knngraph(rpf, 10, ne_iters=1)"
+user@sys:~$ cmd="using Shrike; rpf=ShrikeIndex(rand(100, 10000)); @time knngraph(rpf, 10, ne_iters=1)"
 user@sys:~$ julia -e "$cmd"
   12.373127 seconds (8.66 M allocations: 4.510 GiB, 6.85% gc time, 18.88% compilation time)
 user@sys:~$ julia  --threads 4 -e "$cmd"
   6.306410 seconds (8.67 M allocations: 4.498 GiB, 13.12% gc time, 31.64% compilation time)
 ```
-(This assumes that `RPTrees` is installed.)
+(This assumes that `Shrike` is installed.)
 
 ## Benchmarks
 
 
 This package was compared to the original [`mrpt`](https://github.com/vioshyvo/mrpt) C++ implementation (on which this algorithm was based), [`annoy`](https://github.com/spotify/annoy), a popular package for approximate nearest neighbors, and [`NearestNeighbors.jl`](https://github.com/KristofferC/NearestNeighbors.jl), a Julia package for nearest neighbor search. The benchmarks were written in the spirit of [`ann-benchmarks`](https://github.com/erikbern/ann-benchmarks), a repository for comparing different approximate nearest neighbor algorithms. The datasets used for the benchmark were taken directly from `ann-benchmarks`. The following are links to the HDF5 files in question: [FashionMNIST](http://ann-benchmarks.com/fashion-mnist-784-euclidean.hdf5), [SIFT](http://ann-benchmarks.com/sift-128-euclidean.hdf5), [MNIST](http://ann-benchmarks.com/mnist-784-euclidean.hdf5) and [GIST](http://ann-benchmarks.com/gist-960-euclidean.hdf5). The benchmarks below were run on a compute cluster, restricting all algorithms to a single thread.
 
-![FashionMNIST Speed Comparison](https://github.com/djpasseyjr/RPTrees.jl/raw/main/docs/src/images/fashionmnist_bm.png)
+![FashionMNIST Speed Comparison](https://github.com/djpasseyjr/Shrike.jl/raw/main/docs/src/images/fashionmnist_bm.png)
 
 In this plot, up and to the right is better. (Faster queries, better recall). Each point represents a parameter combination. For a full documentation of parameters run and timing methods consult the original scripts located in the `benchmark/` directory.
 
-This plot illustrates how for this dataset, on most parameter combinations, `RPTrees` has better preformance. Compared to SIFT, below, where some parameter combinations are not as strong. We speculate that this has to do with the high dimensionality of points in FashionMNIST (d=784), compared to the lower dimensionality of SIFT (d=128).
+This plot illustrates how for this dataset, on most parameter combinations, `Shrike` has better preformance. Compared to SIFT, below, where some parameter combinations are not as strong. We speculate that this has to do with the high dimensionality of points in FashionMNIST (d=784), compared to the lower dimensionality of SIFT (d=128).
 
-![SIFT Speed Comparison](https://github.com/djpasseyjr/RPTrees.jl/raw/main/docs/src/images/sift_bm.png)
+![SIFT Speed Comparison](https://github.com/djpasseyjr/Shrike.jl/raw/main/docs/src/images/sift_bm.png)
 
 It is important to note that `NearestNeighbors.jl` was designed to return the *exact* k-nearest-neighbors as quickly as possible, and does not approximate, hence the high accuracy and lower speed.
 
-The takeaway here is that `RPTrees` is fast! It is possibly a little faster than the original C++ implementation. Go Julia! We should note, that `RPTrees` was *not* benchmarked against state of the art algorithms for approximate nearest neighbor search. These algorithms are faster than `annoy` and `mrpt`, but unfortunately, the developers of `RPTrees` don't know anything else about these algorithms. 
+The takeaway here is that `Shrike` is fast! It is possibly a little faster than the original C++ implementation. Go Julia! We should note, that `Shrike` was *not* benchmarked against state of the art algorithms for approximate nearest neighbor search. These algorithms are faster than `annoy` and `mrpt`, but unfortunately, the developers of `Shrike` don't know anything else about these algorithms.
 
 ## Function Documentation
 
 ```@docs
-RPForest(data::AbstractArray{T, 2}, depth::Int, ntrees::Int) where T
+ShrikeIndex(data::AbstractArray{T, 2}, depth::Int, ntrees::Int) where T
 ```
 
 ```@docs
-ann(rpf::RPForest{T}, q::AbstractArray{T, 2}, k::Int; vote_cutoff=1) where T
+ann(rpf::ShrikeIndex{T}, q::AbstractArray{T, 2}, k::Int; vote_cutoff=1) where T
 ```
 
 ```@docs
-knngraph(rpf::RPForest{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0, gtype::G=SimpleDiGraph) where {T, G}
+knngraph(rpf::ShrikeIndex{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0, gtype::G=SimpleDiGraph) where {T, G}
 ```
 
 ```@docs
@@ -125,10 +125,10 @@ explore(i::Int, data::AbstractArray{T}, ann::Array{NeighborExplorer{T}, 1}) wher
 ```
 
 ```@docs
-allknn(rpf::RPForest{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0) where T
+allknn(rpf::ShrikeIndex{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0) where T
 ```
 
 
 ```@docs
-traverse_tree(rpf::RPForest{T}, x::Array{T, 2}) where T
+traverse_tree(rpf::ShrikeIndex{T}, x::Array{T, 2}) where T
 ```

@@ -1,6 +1,6 @@
 using Distances
 using HDF5
-using RPTrees
+using Shrike
 using NearestNeighbors
 using NPZ
 
@@ -13,9 +13,9 @@ FNAMES = ["mnist-784-euclidean.hdf5"]
 
 println("Loading Datasets")
 FILES = map(x -> string(DATAFOLDER, x), FNAMES)
-RPTREES_NTREES = [2]#, 5, 8, 10, 20, 100, 200]
-RPTREES_DEPTH = [4]#, 5, 7, 8, 9, 11, 12, 13]
-RPTREES_NVOTES = [1]#, 2, 3, 10, 20]
+SHRIKE_NTREES = [2]#, 5, 8, 10, 20, 100, 200]
+SHRIKE_DEPTH = [4]#, 5, 7, 8, 9, 11, 12, 13]
+SHRIKE_NVOTES = [1]#, 2, 3, 10, 20]
 KDTREE_LEAFSIZE = [100]#, 300, 500, 1000, 2000, 5000, 10000]
 
 struct NNData
@@ -53,11 +53,11 @@ for nndata in allNNDatasets()
     rpt_results::Array{Array{Float64, 1}, 1} = [[],[]]
     kdt_results::Array{Array{Float64, 1}, 1} = [[],[]]
     maxdepth = floor(log(2, nndata.npoints) - log(2, nndata.k))
-    # RPTrees Algorithm
-    for ntrees in RPTREES_NTREES
-        for depth in RPTREES_DEPTH[RPTREES_DEPTH .< maxdepth]
-            for nvotes in RPTREES_NVOTES
-                index = RPForest(X, nndata.k, depth=depth, ntrees=ntrees)
+    # Shrike Algorithm
+    for ntrees in SHRIKE_NTREES
+        for depth in SHRIKE_DEPTH[SHRIKE_DEPTH .< maxdepth]
+            for nvotes in SHRIKE_NVOTES
+                index = ShrikeIndex(X, nndata.k, depth=depth, ntrees=ntrees)
                 tot_time = 0.0
                 tot_recall = 0.0
                 for i in 1:nndata.ntest
@@ -73,7 +73,7 @@ for nndata in allNNDatasets()
         end
     end
     npzwrite("rpt-$(nndata.name).npy", hcat(rpt_results...))
-    println("RPTrees Complete")
+    println("Shrike Complete")
 
     for leafsize in KDTREE_LEAFSIZE
         index = KDTree(X, leafsize=leafsize)
