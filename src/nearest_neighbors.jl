@@ -1,21 +1,21 @@
 """
-    traverse_tree(rpf::ShrikeIndex{T}, x::Array{T, 2}) where T -> leaf_idxs
+    traverse_tree(shi::ShrikeIndex{T}, x::Array{T, 2}) where T -> leaf_idxs
 
 Route data point `x` down to a leaf node each tree and return and array of
 indexes of the data stored in each corresponding leaf node
 """
-function traverse_tree(rpf::ShrikeIndex{T}, x::AbstractArray{T, 2}) where T
+function traverse_tree(shi::ShrikeIndex{T}, x::AbstractArray{T, 2}) where T
     # Compute all needed projections
-    proj::Array{T, 1} = reshape(transpose(x) * rpf.random_vectors, :)
+    proj::Array{T, 1} = reshape(transpose(x) * shi.random_vectors, :)
     # Initial node indexes (Root index for each tree)
-    node_idxs = ones(Int, rpf.ntrees)
+    node_idxs = ones(Int, shi.ntrees)
     # Location of projection value for the current depth (Starts at
-    # [1, rpf.depth, 2*rpf.depth, ... rpf.depth*rpf.ntrees].)
-    projection_idxs::Array{Int, 1} = collect(1:rpf.depth:rpf.depth*rpf.ntrees);
+    # [1, shi.depth, 2*shi.depth, ... shi.depth*shi.ntrees].)
+    projection_idxs::Array{Int, 1} = collect(1:shi.depth:shi.depth*shi.ntrees);
     # For each level of the trees
-    @inbounds for d in 1:rpf.depth
+    @inbounds for d in 1:shi.depth
         # Determine if the projection is on the left or right of the split
-        mask::Array{Bool, 1} = proj[projection_idxs] .>=  _get_splits(rpf, node_idxs)
+        mask::Array{Bool, 1} = proj[projection_idxs] .>=  _get_splits(shi, node_idxs)
         # Move node indexes to the right child
         node_idxs .*= 2
         # Change to left child if the projection was less than the split value
@@ -25,27 +25,27 @@ function traverse_tree(rpf::ShrikeIndex{T}, x::AbstractArray{T, 2}) where T
     end
     # Subtract the number of non leaf nodes (Because we don't store indexes
     # at non leaf nodes)
-    node_idxs .-= 2^rpf.depth - 1
-    leaf_idxs = map(i -> rpf.indexes[node_idxs[i], i], 1:rpf.ntrees)
+    node_idxs .-= 2^shi.depth - 1
+    leaf_idxs = map(i -> shi.indexes[node_idxs[i], i], 1:shi.ntrees)
     return leaf_idxs
 end
 
-traverse_tree(rpf::ShrikeIndex{T}, x::AbstractArray{T, 1}) where T = traverse_tree(rpf, reshape(x, :, 1))
+traverse_tree(shi::ShrikeIndex{T}, x::AbstractArray{T, 1}) where T = traverse_tree(shi, reshape(x, :, 1))
 
 """
-    _get_splits(rpf::ShrikeIndex{T}, node_idx::Array{Int, 1}) where T -> splits
+    _get_splits(shi::ShrikeIndex{T}, node_idx::Array{Int, 1}) where T -> splits
 
-Given an array of node indexes of length `rpf.ntrees` corresponding to the
+Given an array of node indexes of length `shi.ntrees` corresponding to the
 current index in each tree, return the split values of each node.
 """
-@inline _get_splits(rpf::ShrikeIndex{T}, node_idx::Array{Int, 1}) where T = map(i -> rpf.splits[i, node_idx[i]], 1:rpf.ntrees)
+@inline _get_splits(shi::ShrikeIndex{T}, node_idx::Array{Int, 1}) where T = map(i -> shi.splits[i, node_idx[i]], 1:shi.ntrees)
 
 """
-    leafsize(rpf::ShrikeIndex) -> ls
+    leafsize(shi::ShrikeIndex) -> ls
 
 Return the minimum number of points in the leaf nodes
 """
-leafsize(rpf::ShrikeIndex) = floor(Int, rpf.npoints / 2^rpf.depth)
+leafsize(shi::ShrikeIndex) = floor(Int, shi.npoints / 2^shi.depth)
 
 """
     getdepth(leafsize::Int, npoints::Int) -> d
@@ -137,16 +137,16 @@ end
 @inline vote!(v::Array{UInt16, 1}, idx::Array{Int, 1}) = v[idx] .+= 0x0001
 
 """
-    candidate_idxs(rpf::ShrikeIndex{T}, q::Array{T, N}, k::Int; vote_cutoff=1) where {T, N} -> cand_idx
+    candidate_idxs(shi::ShrikeIndex{T}, q::Array{T, N}, k::Int; vote_cutoff=1) where {T, N} -> cand_idx
 
 Each RP-Tree in the `ShrikeIndex` "votes" for nearest neighbor candidates. All points that receive
 more than `vote_cutoff` votes are returned. By default `vote_cutoff=1` and this returns
 the set union of all RP-Tree leaf nodes in the ensemble. This is the standard RP-Tree algorithm.
 """
-@inline function candidate_idxs(rpf::ShrikeIndex{T}, q::AbstractArray{T, N}, k::Int; vote_cutoff=1) where {T, N}
-    leaf_idxs = traverse_tree(rpf, q)
+@inline function candidate_idxs(shi::ShrikeIndex{T}, q::AbstractArray{T, N}, k::Int; vote_cutoff=1) where {T, N}
+    leaf_idxs = traverse_tree(shi, q)
     # Empty array of votes
-    votes = zeros(UInt16, rpf.npoints)
+    votes = zeros(UInt16, shi.npoints)
     # Each tree votes on candiate nearest neighbors
     ThreadsX.map(idxs -> vote!(votes, idxs), leaf_idxs)
     # Find candiate points with enough votes
@@ -156,17 +156,18 @@ the set union of all RP-Tree leaf nodes in the ensemble. This is the standard RP
 end
 
 """
-    approx_knn(rpf::ShrikeIndex{T}, q::Array{T, 2}, k::Int; vote_cutoff=1) where T -> knn_idx
+    approx_knn(shi::ShrikeIndex{T}, q::Array{T, 2}, k::Int; vote_cutoff=1) where T -> knn_idx
 
 For a query point `q`, find the approximate `k` nearest neighbors from the data stored in the the
-ShrikeIndex. The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included in a linear search. Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy.
+ShrikeIndex. The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included
+in a linear search. Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy.
 
 """
-function ann(rpf::ShrikeIndex{T}, q::AbstractArray{T, N}, k::Int; vote_cutoff::Int=1) where {T, N}
-	safe_vote_cutoff = min(rpf.ntrees, vote_cutoff)
-    cand_idx = candidate_idxs(rpf, q, k, vote_cutoff=safe_vote_cutoff)
+function ann(shi::ShrikeIndex{T}, q::AbstractArray{T, N}, k::Int; vote_cutoff::Int=1) where {T, N}
+	safe_vote_cutoff = min(shi.ntrees, vote_cutoff)
+    cand_idx = candidate_idxs(shi, q, k, vote_cutoff=safe_vote_cutoff)
     ncand::Int = length(cand_idx)
-    cand_dist = ThreadsX.map(i -> disttopoint(i, q, rpf.data), cand_idx)
+    cand_dist = ThreadsX.map(i -> disttopoint(i, q, shi.data), cand_idx)
     sp = sortperm(cand_dist, alg=PartialQuickSort(k))
 	@inbounds knn_idx = [cand_idx[sp[i]] for i=1:min(ncand,k)]
     return knn_idx
@@ -196,41 +197,41 @@ Helper function for creating a knn-graph from a ShrikeIndex
 end
 
 """
-    collect_votes(rpf::ShrikeIndex{T}, k::Int) -> votes
+    collect_votes(shi::ShrikeIndex{T}, k::Int) -> votes
 
 Iterate through each leaf and collect predicted neighbors. Count how often
 two nodes appear together in leaf nodes. (These are the votes.) We can
 filter candidate neighbors by number of votes later.
 """
-function collect_votes(rrpf::ShrikeIndex{T}, k::Int) where T
-	votes = [Dict{Int,UInt16}() for i in 1:rpf.npoints]
-    nleafs = 2^rpf.depth
-    for i in 1:rpf.ntrees
+function collect_votes(shi::ShrikeIndex{T}, k::Int) where T
+	votes = [Dict{Int,UInt16}() for i in 1:shi.npoints]
+    nleafs = 2^shi.depth
+    for i in 1:shi.ntrees
         for j in 1:nleafs
-            vote!(votes, rpf.indexes[j, i])
+            vote!(votes, shi.indexes[j, i])
         end
     end
 	return votes
 end
 
 """
-    build_neighbor_explorer(i::Int, votes::Dict{Int, UInt16}, rpf::ShrikeIndex{T}, k::Int, vote_cutoff::Int) -> approx_nn
+    build_neighbor_explorer(i::Int, votes::Dict{Int, UInt16}, shi::ShrikeIndex{T}, k::Int, vote_cutoff::Int) -> approx_nn
 
 Linear search through candidate nearest neighbors. Store in a heap.
 """
 function build_neighbor_explorer(
 	i::Int,
 	votes::Dict{Int, UInt16},
-	rpf::ShrikeIndex{T},
+	shi::ShrikeIndex{T},
 	k::Int,
 	vote_cutoff::Int
 ) where T
 	approx_nn = NeighborExplorer{T}(i, k)
 	nodes = collect(keys(votes))
-	@inbounds x = @view rpf.data[:, i]
+	@inbounds x = @view shi.data[:, i]
 	@inbounds for node in nodes
 		if votes[node] >= vote_cutoff
-			y = @view rpf.data[:, node]
+			y = @view shi.data[:, node]
 			push!(approx_nn, node, sqeuclidean(x,y))
 		end
 	end
@@ -238,35 +239,36 @@ function build_neighbor_explorer(
 end
 
 """
-    _allknn(rpf::ShrikeIndex{T}, k::Int; vote_cutoff=1) where T -> knn
+    _allknn(shi::ShrikeIndex{T}, k::Int; vote_cutoff=1) where T -> knn
 
 Returns a neighbor explorer for each point to allow for neighbors of neighbors exploration
 and the creation of a knn-graph.
 
-The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included in a linear search. Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy.
+The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be
+included in a linear search. Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy.
 """
-function _allknn(rpf::ShrikeIndex{T}, k::Int, vote_cutoff::Int) where T
-	votes = collect_votes(rpf, k, vote_cutoff)
+function _allknn(shi::ShrikeIndex{T}, k::Int, vote_cutoff::Int) where T
+	votes = collect_votes(shi, k, vote_cutoff)
     knn = ThreadsX.map(
-		(i,v) -> build_neighbor_explorer(i, v, rpf, k, vote_cutoff),
-		1:rpf.npoints,
+		(i,v) -> build_neighbor_explorer(i, v, shi, k, vote_cutoff),
+		1:shi.npoints,
 		votes
 	)
     return knn
 end
 
 """
-    _allcandidates(rpf::ShrikeIndex{T}, k::Int) -> allneighbors
+    _allcandidates(shi::ShrikeIndex{T}, k::Int) -> allneighbors
 
 Optimizations for the case when `vote_cutoff=1`. Use a set union of the leaf
 indexes instead of a dictionary of votes.
 """
-function _allcandidates(rpf::ShrikeIndex{T}, k::Int) where T
-	nleafs = 2^rpf.depth
-    allneighbors = [Set{Int64}() for i=1:rpf.npoints]
-	for i in 1:rpf.ntrees
+function _allcandidates(shi::ShrikeIndex{T}, k::Int) where T
+	nleafs = 2^shi.depth
+    allneighbors = [Set{Int64}() for i=1:shi.npoints]
+	for i in 1:shi.ntrees
 		for j in 1:nleafs
-			ind = rpf.indexes[j, i]
+			ind = shi.indexes[j, i]
 			for k in ind
 				indset = allneighbors[k]
 				for l in ind
@@ -279,7 +281,7 @@ function _allcandidates(rpf::ShrikeIndex{T}, k::Int) where T
 end
 
 """
-    build_neighbor_explorer(i::Int, candidates::Set{Int}, rpf::ShrikeIndex{T}, k::Int) -> approx_nn
+    build_neighbor_explorer(i::Int, candidates::Set{Int}, shi::ShrikeIndex{T}, k::Int) -> approx_nn
 
 Optimizations for the case when `vote_cutoff=1`. Don't check number of votes.
 Iterate though set of candidates.
@@ -287,29 +289,29 @@ Iterate though set of candidates.
 function build_neighbor_explorer(
 	i::Int,
 	candidates::Set{Int},
-	rpf::ShrikeIndex{T},
+	shi::ShrikeIndex{T},
 	k::Int
 ) where T
 	approx_nn = NeighborExplorer{T}(i, k)
-	@inbounds x = @view rpf.data[:, i]
+	@inbounds x = @view shi.data[:, i]
 	 for node in candidates
-		@inbounds y = @view rpf.data[:, node]
+		@inbounds y = @view shi.data[:, node]
 		push!(approx_nn, node, sqeuclidean(x,y))
 	end
 	return approx_nn
 end
 
 """
-	_allknn(rpf::ShrikeIndex{T}, k::Int) -> approx_nns
+	_allknn(shi::ShrikeIndex{T}, k::Int) -> approx_nns
 
 Optimizations for finding the nearest neighbors of every point in
 the case `vote_cutoff=1`
 """
-function _allknn(rpf::ShrikeIndex{T}, k::Int) where T
-	allneighbors = _allcandidates(rpf, k)
+function _allknn(shi::ShrikeIndex{T}, k::Int) where T
+	allneighbors = _allcandidates(shi, k)
 	approx_nns = ThreadsX.map(
-		(i,v) -> build_neighbor_explorer(i, v, rpf, k),
-		1:rpf.npoints,
+		(i,v) -> build_neighbor_explorer(i, v, shi, k),
+		1:shi.npoints,
 		allneighbors
 	)
 	return approx_nns
@@ -342,32 +344,35 @@ function explore(i::Int, data::AbstractArray{T}, approx_nn::Array{NeighborExplor
 end
 
 """
-    allknn(rpf::ShrikeIndex{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0) where T -> approxnn_array
+    allknn(shi::ShrikeIndex{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0) where T -> approxnn_array
 
-Returns a `rpf.npoints` by `k` array of approximate nearest neighbor indexes.
+Returns a `shi.npoints` by `k` array of approximate nearest neighbor indexes.
 That is, `approxnn_array[i,:]` contains the indexes of the k nearest neighbors of
-`rpf.data[:, i]`.
+`shi.data[:, i]`.
 
-The `ne_iters` assigns the number of iterations of neighbor exploration to use.
+**Parameters**
+
+1. The `ne_iters` assigns the number of iterations of neighbor exploration to use.
 Neighbor exploration is an inexpensive way to increase accuracy.
 
-The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included
+2, The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included
 in a linear search. Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy.
+Passing too large of a `vote_cutoff` results in the algorithm resetting `vote_cutoff` to equal the number of trees.
 """
-function allknn(rpf::ShrikeIndex{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0) where T
-	safe_vote_cutoff = min(rpf.ntrees, vote_cutoff)
+function allknn(shi::ShrikeIndex{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0) where T
+	safe_vote_cutoff = min(shi.ntrees, vote_cutoff)
     # Search tree via neighbor explorers
 	if safe_vote_cutoff == 1
-		approx_nns = _allknn(rpf, k)
+		approx_nns = _allknn(shi, k)
 	else
-    	approx_nns = _allknn(rpf, k, safe_vote_cutoff)
+    	approx_nns = _allknn(shi, k, safe_vote_cutoff)
 	end
     # Neighbor exploration
     for i in 1:ne_iters
-        approx_nns = ThreadsX.map(i -> explore(i, rpf.data, approx_nns), 1:rpf.npoints)
+        approx_nns = ThreadsX.map(i -> explore(i, shi.data, approx_nns), 1:shi.npoints)
     end
     # Load neighbor explorers into a matrix
-    approxnn_array = zeros(Int, rpf.npoints, k)
+    approxnn_array = zeros(Int, shi.npoints, k)
     for (i, ne) in enumerate(approx_nns)
         @inbounds approxnn_array[i, :] = get_idxs(ne)
     end
@@ -386,23 +391,24 @@ function add_edges!(j::Int, approx_nnj::NeighborExplorer{T}, A::AbstractArray{U,
 end
 
 """
-    knngraph(rpf::ShrikeIndex{T}, k::Int, vote_cutoff; vote_cutoff::Int=1, ne_iters::Int=0, gtype::G) where {T, G} -> g
+    knngraph(shi::ShrikeIndex{T}, k::Int, vote_cutoff; vote_cutoff::Int=1, ne_iters::Int=0, gtype::G) where {T, G} -> g
 
-Returns a graph with `rpf.npoints` node and `k * rpf.npoints` edges datapoints conneceted to nearest neighbors
+Returns a graph with `shi.npoints` node and `k * shi.npoints` edges datapoints conneceted to nearest neighbors
 
 **Parameters**
 
-1. `rpf`: random forest of the desired data
+1. `shi`: random forest of the desired data
 2. `k`: the desired number of nearest neighbors
 3. `vote_cutoff`: signifies how many "votes" a point needs in order to be included
-in a linear search through leaf nodes. Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy. Defaults to 1
+in a linear search through leaf nodes. Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy.
+Passing too large of a `vote_cutoff` results in the algorithm resetting `vote_cutoff` to equal the number of trees.
 4. `ne_iters`: assigns the number of iterations of neighbor exploration to use. Defaults to zero.
 Neighbor exploration is a way to increse knn-graph accuracy.
 5. `gtype` is the type of graph to construct. Defaults to `SimpleDiGraph`. `gtype=identity` returns a sparse adjacency matrix.
 
 """
 function knngraph(
-	rpf::ShrikeIndex{T},
+	shi::ShrikeIndex{T},
 	k::Int;
 	vote_cutoff::Int=1,
 	ne_iters::Int=0,
@@ -410,17 +416,17 @@ function knngraph(
 ) where {T, G}
     # Search tree via neighbor explorers
 	if vote_cutoff == 1
-		approx_nns = _allknn(rpf, k)
+		approx_nns = _allknn(shi, k)
 	else
-    	approx_nns = _allknn(rpf, k, vote_cutoff)
+    	approx_nns = _allknn(shi, k, vote_cutoff)
 	end
     # Neighbor exploration (In parallel)
     for i in 1:ne_iters
-        approx_nns = ThreadsX.map(i -> explore(i, rpf.data, approx_nns), 1:rpf.npoints)
+        approx_nns = ThreadsX.map(i -> explore(i, shi.data, approx_nns), 1:shi.npoints)
     end
     # Load neighbor explorers into a sparse adj matrix (TODO: In parallel)
-    A = spzeros(Int, rpf.npoints, rpf.npoints)
-    for j in 1:rpf.npoints
+    A = spzeros(Int, shi.npoints, shi.npoints)
+    for j in 1:shi.npoints
         add_edges!(j, approx_nns[j], A)
     end
     # Construct graph

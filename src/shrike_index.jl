@@ -79,7 +79,7 @@ end
 ShrikeIndex(data::AbstractArray{T, 2}; depth::Int=4, ntrees::Int=5) where T = ShrikeIndex(data, depth, ntrees)
 
 """
-    ShrikeIndex(data::AbstractArray{T, 2}; depth::Int=4, ntrees::Int=5, k) -> rpf
+    ShrikeIndex(data::AbstractArray{T, 2}; depth::Int=4, ntrees::Int=5, k) -> shi
 
 Keyword argument version of the constructor. The argument `k` is the intended
 number of nearest neighbors that you will be approximating. Passing `k` will
@@ -96,8 +96,8 @@ function ShrikeIndex(data::AbstractArray{T, 2}, k::Int; depth::Int=4, ntrees::In
     return ShrikeIndex(data, safedepth, ntrees)
 end
 
-function Base.show(io::IO, rpf::ShrikeIndex)
-    descr = "ShrikeIndex: \n    $(rpf.ntrees) trees \n    $(rpf.npoints) datapoints \n    Depth $(rpf.depth)"
+function Base.show(io::IO, shi::ShrikeIndex)
+    descr = "ShrikeIndex: \n    $(shi.ntrees) trees \n    $(shi.npoints) datapoints \n    Depth $(shi.depth)"
     print(io, descr)
 end
 

@@ -1,4 +1,7 @@
 # Shrike.jl
+[![Build Status](https://github.com/djpasseyjr/Shrike.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/djpasseyjr/Shrike.jl/actions/workflows/ci.yml/badge.svg)
+[![codecov](https://codecov.io/gh/djpasseyjr/Shrike.jl/branch/main/graph/badge.svg?token=S7PNXQOLQK)](https://codecov.io/gh/djpasseyjr/Shrike.jl)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://djpasseyjr.github.io/Shrike.jl/dev)
 
 ![Random Projection Splits](https://github.com/djpasseyjr/Shrike.jl/raw/main/docs/src/images/rppartition.png)
 
@@ -28,21 +31,21 @@ To build an ensemble of random projection trees use the `ShrikeIndex` type.
 ```jl
 using Shrike
 X = rand(100, 10000)
-rpf = ShrikeIndex(X; depth=6, ntrees=5)
+rpf = ShrikeIndex(X; maxdepth=6, ntrees=5)
 ```
 The type accepts a matrix of data, `X` where each column represents a datapoint.
 
-1. `depth` describes the number of times each random projection tree will split the data. Leaf nodes in the tree contain `npoints / 2^depth` data points. Increasing `depth` increases speed but decreases accuracy.
+1. `maxdepth` describes the number of times each random projection tree will split the data. Leaf nodes in the tree contain `npoints / 2^maxdepth` data points. Increasing `maxdepth` increases speed but decreases accuracy.
 2. `ntrees` controls the number of trees in the ensemble. More trees means more accuracy but more memory.
 
-To query the index use
+To query the index for approximte nearest neighbors use
 ```jl
 k = 10
 q = X[:, 1]
-ann = approx_knn(rpf, q, k; vote_cutoff=2)
+ann = ann(rpf, q, k; vote_cutoff=2)
 ```
 
-1. The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included in a linear search. Each tree "votes" for the points a leaf node, so if there aren't many point in the leaves and there aren't many trees, the odds of a point receiving more than one vote is low.  Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy. When `depth` is large and `ntrees` is less than 5, it is reccomended to set `vote_cutoff = 1`.
+1. The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included in a linear search. Each tree "votes" for the points a leaf node, so if there aren't many point in the leaves and there aren't many trees, the odds of a point receiving more than one vote is low.  Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy. When `maxdepth` is large and `ntrees` is less than 5, it is reccomended to set `vote_cutoff = 1`.
 
 ## KNN-Graphs
 
@@ -55,7 +58,7 @@ To generate nearest neighbor graphs:
 ```jl
 using Shrike
 X = rand(100, 10000)
-rpf = ShrikeIndex(X; depth=6, ntrees=5)
+rpf = ShrikeIndex(X; maxdepth=6, ntrees=5)
 k = 10
 g = knngraph(rpf, k; vote_cutoff=1, ne_iters=1, gtype=SimpleDiGraph)
 ```
@@ -89,8 +92,7 @@ user@sys:~$ julia  --threads 4 -e "$cmd"
 ```
 (This assumes that `Shrike` is installed.)
 
-## Benchmarks
-
+## Benchmark
 
 This package was compared to the original [`mrpt`](https://github.com/vioshyvo/mrpt) C++ implementation (on which this algorithm was based), [`annoy`](https://github.com/spotify/annoy), a popular package for approximate nearest neighbors, and [`NearestNeighbors.jl`](https://github.com/KristofferC/NearestNeighbors.jl), a Julia package for nearest neighbor search. The benchmarks were written in the spirit of [`ann-benchmarks`](https://github.com/erikbern/ann-benchmarks), a repository for comparing different approximate nearest neighbor algorithms. The datasets used for the benchmark were taken directly from `ann-benchmarks`. The following are links to the HDF5 files in question: [FashionMNIST](http://ann-benchmarks.com/fashion-mnist-784-euclidean.hdf5), [SIFT](http://ann-benchmarks.com/sift-128-euclidean.hdf5), [MNIST](http://ann-benchmarks.com/mnist-784-euclidean.hdf5) and [GIST](http://ann-benchmarks.com/gist-960-euclidean.hdf5). The benchmarks below were run on a compute cluster, restricting all algorithms to a single thread.
 
@@ -104,7 +106,8 @@ This plot illustrates how for this dataset, on most parameter combinations, `Shr
 
 It is important to note that `NearestNeighbors.jl` was designed to return the *exact* k-nearest-neighbors as quickly as possible, and does not approximate, hence the high accuracy and lower speed.
 
-The takeaway here is that `Shrike` is fast! It is possibly a little faster than the original C++ implementation. Go Julia! We should note, that `Shrike` was *not* benchmarked against state of the art algorithms for approximate nearest neighbor search. These algorithms are faster than `annoy` and `mrpt`, but unfortunately, the developers of `Shrike` don't know anything else about these algorithms.
+The takeaway here is that `Shrike` is fast! It is possibly a little faster than the original C++ implementation. Go Julia! We should note, that `Shrike` was *not* benchmarked against state of the art algorithms for approximate nearest neighbor search. These algorithms are faster than `annoy` and `mrpt`, but unfortunately, the developers of `Shrike` aren't familiar with these algorithms.
+
 
 ## Function Documentation
 
