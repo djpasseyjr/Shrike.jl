@@ -82,28 +82,17 @@ end
 ShrikeIndex(data::AbstractArray{T, 2}; depth::Int=4, ntrees::Int=5) where T = ShrikeIndex(data, depth, ntrees)
 
 """
-    ShrikeIndex(data::AbstractArray{T, 2}, k; depth::Int=4, ntrees::Int=5) -> shi
+    ShrikeIndex(data::AbstractArray{T, 2}, max)k; depth::Union{Int, Float64}=Inf, ntrees::Int=5) -> shi
 
-Keyword argument version of the constructor with intended number of nearest neighbors.
-The argument `k` is the intended number of nearest neighbors that you will be approximating.
+Keyword argument version of the constructor that includes intended number of nearest neighbors.
 
-This constructor attempts to use the supplied depth, but ensures that the depth of the tree is
-shallow enough to ensure that each leaf has at least k points. (Otherwise, the index may
-return less than k neighbors when queried.)
-"""
-function ShrikeIndex(data::AbstractArray{T, 2}, k::Int; depth::Int=4, ntrees::Int=5) where T
-    m, n = size(data)
-    maxdepth = floor(Int, log(2, n) - log(2, k))
-    if depth > maxdepth
-        safedepth = maxdepth
-    else
-        safedepth = depth
-    end
-    return ShrikeIndex(data, safedepth, ntrees)
-end
+If the default `depth` is used, the constructor sets the tree depth as deep as
+possible given `max_k`. This way, the accuracy/memory tradeoff is determined directly by `ntrees` and the
+desired `vote_cutoff` (`vote_cutoff` is a parameter passed to `ann` or `knngraph`).
 
-"""
-    ShrikeIndex(data::AbstractArray{T, 2}, max_k::Int; ntrees::Int=5) where T -> shi
+If an argument is passed for `depth`, constructor attempts to use the supplied `depth`, but guarentees
+that the depth of the tree is shallow enough to ensure that each leaf has at least k points.
+(Without this check, the index may return less than k neighbors when queried.)
 
 **Parameters**
 
@@ -117,16 +106,20 @@ so as to maximize speed,
 
 3. `ntrees`: The number of trees in the index. More trees means more accuracy,
 more memory and less speed. Use this to tune the speed/accuracy tradeoff.
-
-This constructor sets the tree depth to be the maximum depth possible given `max_k`.
-This way, the accuracy/memory tradeoff is determined by `ntrees` and the desired `vote_cutoff`
-(`vote_cutoff` is a parameter passed to `ann` or `knngraph`).
+4. `depth`: The number of splits in the tree. Depth of 0 means only a root,
+depth of 1 means root has two children, etc..
 """
-function ShrikeIndex(data::AbstractArray{T, 2}, max_k::Int; ntrees::Int=5) where T
+function ShrikeIndex(data::AbstractArray{T, 2}, maxk::Int; depth::Union{Int, Float64}=Inf, ntrees::Int=10) where T
     m, n = size(data)
-    maxdepth = floor(Int, log(2, n) - log(2, max_k))
-    return ShrikeIndex(data, maxdepth, ntrees)
+    maxdepth = floor(Int, log(2, n) - log(2, maxk))
+    if depth > maxdepth
+        safedepth = maxdepth
+    else
+        safedepth = depth
+    end
+    return ShrikeIndex(data, safedepth, ntrees)
 end
+
 
 function Base.show(io::IO, shi::ShrikeIndex)
     descr = "ShrikeIndex: \n    $(shi.ntrees) trees \n    $(shi.npoints) datapoints \n    Depth $(shi.depth)"

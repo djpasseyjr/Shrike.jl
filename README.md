@@ -30,26 +30,34 @@ To build an ensemble of random projection trees use the `ShrikeIndex` type.
 
 ```jl
 using Shrike
+maxk = 100
 X = rand(100, 10000)
-shi = ShrikeIndex(X; maxdepth=6, ntrees=5)
+shi = ShrikeIndex(X, maxk; depth=8, ntrees=10)
 ```
 The type accepts a matrix of data, `X` where each column represents a datapoint.
 
-1. `maxdepth` describes the number of times each random projection tree will split the data. Leaf nodes in the tree contain `npoints / 2^maxdepth` data points. Increasing `maxdepth` increases speed but decreases accuracy.
-2. `ntrees` controls the number of trees in the ensemble. More trees means more accuracy but more memory.
+1. `maxk` represents the maximum number of nearest neighbors you will be able to find with this index.
+`maxk` is used to set a safe `depth` for the tree. You can also construct an index without this parameter if you need to.
+2. `depth` describes the number of times each random projection tree will split the data. Leaf nodes in the tree contain about `npoints / 2^depth` data points. Increasing `depth` increases speed but decreases accuracy. By default, the index sets depth as large as possible.
+3. `ntrees` controls the number of trees in the ensemble. More trees means more accuracy but more memory.
 
-To query the index for approximte nearest neighbors use
+In this case, since we need an index that can find the 100 nearest neighbors, setting `depth` equal to 8 will result in
+some leaf nodes with less than 100 points. The index will infer this using `maxk` and set the `depth` to be as large as
+possible given `maxk`. In this case, `depth =  6`.
+
+To query the index for approximte 10 nearest neighbors use:
+
 ```jl
 k = 10
 q = X[:, 1]
-ann = ann(shi, q, k; vote_cutoff=2)
+approx_nn = ann(shi, q, k; vote_cutoff=2)
 ```
 
-1. The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included in a linear search. Each tree "votes" for the points a leaf node, so if there aren't many point in the leaves and there aren't many trees, the odds of a point receiving more than one vote is low.  Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy. When `maxdepth` is large and `ntrees` is less than 5, it is reccomended to set `vote_cutoff = 1`.
+1. The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included in a linear search. Each tree "votes" for the points a leaf node, so if there aren't many point in the leaves and there aren't many trees, the odds of a point receiving more than one vote is low.  Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy. When `depth` is large and `ntrees` is less than 5, it is reccomended to set `vote_cutoff = 1`.
 
 ## KNN-Graphs
 
-This package was designed specifically to generate k-nearest-neighbor graphs and has specialized functions for this purpose. It uses neighbor of neighbor exploration (outlined [here](https://arxiv.org/pdf/1602.00370.pdf)) to efficiently improve the accuracy of a knn-graph.
+This package includes fast algorithms to generate k-nearest-neighbor graphs and has specialized functions for this purpose. It uses neighbor of neighbor exploration (outlined [here](https://arxiv.org/pdf/1602.00370.pdf)) to efficiently improve the accuracy of a knn-graph.
 
 Nearest neighbor graphs are used to give a sparse topology to large datasets. Their structure can be used to [project the data](https://arxiv.org/pdf/1602.00370.pdf) onto a lower dimensional manifold, to cluster datapoints with community detection algorithms or to preform other analyses.
 
@@ -58,7 +66,7 @@ To generate nearest neighbor graphs:
 ```jl
 using Shrike
 X = rand(100, 10000)
-shi = ShrikeIndex(X; maxdepth=6, ntrees=5)
+shi = ShrikeIndex(X; depth=6, ntrees=5)
 k = 10
 g = knngraph(shi, k; vote_cutoff=1, ne_iters=1, gtype=SimpleDiGraph)
 ```
@@ -72,7 +80,7 @@ If an array of nearest neighbor indices is preferred,
 nn = allknn(shi, k; vote_cutoff=1, ne_iters=0)
 ```
 
-can be used to generate an `shi.npoints`x`k` array of integer indexes where `nn[i, :]` corresponds to the nearest neighbors of `X[:, i]`. The keyword arguments work as outlined above.
+can be used to generate an `shi.npoints`x`k` array of integer indexes where `nn[i, :]` corresponds to the nearest neighbors of `X[:, i]`. The keyword arguments work in the same way as in `knngraph` (outlined above).
 
 ## Threading
 
