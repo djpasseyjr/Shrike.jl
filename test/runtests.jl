@@ -4,23 +4,29 @@ using Test
 
 @testset "Constructor" begin
     X = rand(250, 16)
-    rpf = ShrikeIndex(X, 3, 3)
+    shi = ShrikeIndex(X, 3, 3)
     # Check for self consistency
-    @test all((size(rpf.splits) .== (rpf.ntrees, 2^rpf.depth - 1)))
-    @test all(size(rpf.indexes) .== (2^rpf.depth, rpf.ntrees))
-    @test all(size(rpf.random_vectors) .== (rpf.ndims, rpf.ntrees * rpf.depth))
+    @test all((size(shi.splits) .== (shi.ntrees, 2^shi.depth - 1)))
+    @test all(size(shi.indexes) .== (2^shi.depth, shi.ntrees))
+    @test all(size(shi.random_vectors) .== (shi.ndims, shi.ntrees * shi.depth))
 
-    rpf = ShrikeIndex(X, depth=5, ntrees=3)
+    shi = ShrikeIndex(X, depth=5, ntrees=3)
     # Check for self consistency
-    @test all((size(rpf.splits) .== (rpf.ntrees, 2^rpf.depth - 1)))
-    @test all(size(rpf.indexes) .== (2^rpf.depth, rpf.ntrees))
-    @test all(size(rpf.random_vectors) .== (rpf.ndims, rpf.ntrees * rpf.depth))
+    @test all((size(shi.splits) .== (shi.ntrees, 2^shi.depth - 1)))
+    @test all(size(shi.indexes) .== (2^shi.depth, shi.ntrees))
+    @test all(size(shi.random_vectors) .== (shi.ndims, shi.ntrees * shi.depth))
 
-    rpf = ShrikeIndex(X, 3)
+    shi = ShrikeIndex(X, 3)
     # Check for self consistency
-    @test all((size(rpf.splits) .== (rpf.ntrees, 2^rpf.depth - 1)))
-    @test all(size(rpf.indexes) .== (2^rpf.depth, rpf.ntrees))
-    @test all(size(rpf.random_vectors) .== (rpf.ndims, rpf.ntrees * rpf.depth))
+    @test all((size(shi.splits) .== (shi.ntrees, 2^shi.depth - 1)))
+    @test all(size(shi.indexes) .== (2^shi.depth, shi.ntrees))
+    @test all(size(shi.random_vectors) .== (shi.ndims, shi.ntrees * shi.depth))
+
+    shi = ShrikeIndex(X, 3, depth=3, ntrees=10)
+    # Check for self consistency
+    @test all((size(shi.splits) .== (shi.ntrees, 2^shi.depth - 1)))
+    @test all(size(shi.indexes) .== (2^shi.depth, shi.ntrees))
+    @test all(size(shi.random_vectors) .== (shi.ndims, shi.ntrees * shi.depth))
 
 end
 
@@ -29,9 +35,9 @@ end
 # traverse_tree returns leaf nodes containing the given datapoint
 @testset "Traverse" begin
     X = rand(250, 16)
-    rpf = ShrikeIndex(X, 3, 3)
+    shi = ShrikeIndex(X, 3, 3)
     for j =1:size(X)[2]
-        @test all(map(idxs -> j in idxs, traverse_tree(rpf, reshape(X[:, j], :, 1))))
+        @test all(map(idxs -> j in idxs, traverse_tree(shi, reshape(X[:, j], :, 1))))
     end
 end
 
@@ -39,14 +45,14 @@ end
     k = 10
     npoints = 1000
     X = randn(300, npoints)
-    rpf = ShrikeIndex(X)
-    @test length(ann(rpf, X[:, 1:1], k; vote_cutoff=1)) == k
-    @test all(size(allknn(rpf, k, ne_iters=1)) .== (npoints, k))
-    @test (knngraph(rpf, k, ne_iters=1)).ne == k * npoints
-    rpf100 = ShrikeIndex(X, ntrees=100)
-    @test length(ann(rpf, X[:, 1:1], k; vote_cutoff=2)) == k
-    @test all(size(allknn(rpf, k, ne_iters=2)) .== (npoints, k))
-    @test (knngraph(rpf, k, ne_iters=2)).ne == k * npoints
+    shi = ShrikeIndex(X)
+    @test length(ann(shi, X[:, 1:1], k; vote_cutoff=1)) == k
+    @test all(size(allknn(shi, k, ne_iters=1)) .== (npoints, k))
+    @test (knngraph(shi, k, ne_iters=1)).ne == k * npoints
+    shi100 = ShrikeIndex(X, ntrees=100)
+    @test length(ann(shi, X[:, 1:1], k; vote_cutoff=2)) == k
+    @test all(size(allknn(shi, k, ne_iters=2)) .== (npoints, k))
+    @test (knngraph(shi, k, ne_iters=2)).ne == k * npoints
 end
 
 
