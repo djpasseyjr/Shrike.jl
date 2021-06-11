@@ -31,18 +31,18 @@ To build an ensemble of random projection trees use the `ShrikeIndex` type.
 ```jl
 using Shrike
 X = rand(100, 10000)
-rpf = ShrikeIndex(X; maxdepth=6, ntrees=5)
+shi = ShrikeIndex(X; maxdepth=6, ntrees=5)
 ```
 The type accepts a matrix of data, `X` where each column represents a datapoint.
 
 1. `maxdepth` describes the number of times each random projection tree will split the data. Leaf nodes in the tree contain `npoints / 2^maxdepth` data points. Increasing `maxdepth` increases speed but decreases accuracy.
 2. `ntrees` controls the number of trees in the ensemble. More trees means more accuracy but more memory.
 
-To query the index use
+To query the index for approximte nearest neighbors use
 ```jl
 k = 10
 q = X[:, 1]
-ann = approx_knn(rpf, q, k; vote_cutoff=2)
+ann = ann(shi, q, k; vote_cutoff=2)
 ```
 
 1. The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included in a linear search. Each tree "votes" for the points a leaf node, so if there aren't many point in the leaves and there aren't many trees, the odds of a point receiving more than one vote is low.  Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy. When `maxdepth` is large and `ntrees` is less than 5, it is reccomended to set `vote_cutoff = 1`.
@@ -58,9 +58,9 @@ To generate nearest neighbor graphs:
 ```jl
 using Shrike
 X = rand(100, 10000)
-rpf = ShrikeIndex(X; maxdepth=6, ntrees=5)
+shi = ShrikeIndex(X; maxdepth=6, ntrees=5)
 k = 10
-g = knngraph(rpf, k; vote_cutoff=1, ne_iters=1, gtype=SimpleDiGraph)
+g = knngraph(shi, k; vote_cutoff=1, ne_iters=1, gtype=SimpleDiGraph)
 ```
 1. The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included in a linear search.
 2. `ne_iters` controlls how many iterations of neighbor exploration the algorithm will undergo. Successive iterations are increasingly fast. It is reccomened to use more iterations of neighbor exploration when the number of trees is small and less when many trees are used.
@@ -69,10 +69,10 @@ g = knngraph(rpf, k; vote_cutoff=1, ne_iters=1, gtype=SimpleDiGraph)
 If an array of nearest neighbor indices is preferred,
 
 ```jl
-nn = allknn(rpf, k; vote_cutoff=1, ne_iters=0)
+nn = allknn(shi, k; vote_cutoff=1, ne_iters=0)
 ```
 
-can be used to generate an `rpf.npoints`x`k` array of integer indexes where `nn[i, :]` corresponds to the nearest neighbors of `X[:, i]`. The keyword arguments work as outlined above.
+can be used to generate an `shi.npoints`x`k` array of integer indexes where `nn[i, :]` corresponds to the nearest neighbors of `X[:, i]`. The keyword arguments work as outlined above.
 
 ## Threading
 
@@ -84,7 +84,7 @@ user@sys:~$ julia --threads 4
 
 To see this at work, consider a small scale example:
 ```console
-user@sys:~$ cmd="using Shrike; rpf=ShrikeIndex(rand(100, 10000)); @time knngraph(rpf, 10, ne_iters=1)"
+user@sys:~$ cmd="using Shrike; shi=ShrikeIndex(rand(100, 10000)); @time knngraph(shi, 10, ne_iters=1)"
 user@sys:~$ julia -e "$cmd"
   12.373127 seconds (8.66 M allocations: 4.510 GiB, 6.85% gc time, 18.88% compilation time)
 user@sys:~$ julia  --threads 4 -e "$cmd"
@@ -106,4 +106,4 @@ This plot illustrates how for this dataset, on most parameter combinations, `Shr
 
 It is important to note that `NearestNeighbors.jl` was designed to return the *exact* k-nearest-neighbors as quickly as possible, and does not approximate, hence the high accuracy and lower speed.
 
-The takeaway here is that `Shrike` is fast! It is possibly a little faster than the original C++ implementation. Go Julia! We should note, that `Shrike` was *not* benchmarked against state of the art algorithms for approximate nearest neighbor search. These algorithms are faster than `annoy` and `mrpt`, but unfortunately, the developers of `Shrike` don't know anything else about these algorithms.
+The takeaway here is that `Shrike` is fast! It is possibly a little faster than the original C++ implementation. Go Julia! We should note, that `Shrike` was *not* benchmarked against state of the art algorithms for approximate nearest neighbor search. These algorithms are faster than `annoy` and `mrpt`, but unfortunately, the developers of `Shrike` aren't familiar with these algorithms.

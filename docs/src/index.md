@@ -112,6 +112,10 @@ The takeaway here is that `Shrike` is fast! It is possibly a little faster than 
 ## Function Documentation
 
 ```@docs
+ShrikeIndex(data::AbstractArray{T, 2}, max_k::Int; ntrees::Int=5) where T
+```
+
+```@docs
 ShrikeIndex(data::AbstractArray{T, 2}, depth::Int, ntrees::Int) where T
 ```
 
@@ -130,7 +134,6 @@ explore(i::Int, data::AbstractArray{T}, ann::Array{NeighborExplorer{T}, 1}) wher
 ```@docs
 allknn(rpf::ShrikeIndex{T}, k::Int; vote_cutoff::Int=1, ne_iters::Int=0) where T
 ```
-
 
 ```@docs
 traverse_tree(rpf::ShrikeIndex{T}, x::Array{T, 2}) where T
