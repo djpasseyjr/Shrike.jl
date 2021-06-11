@@ -25,12 +25,15 @@ Constructor for ensemble of sparse random projection trees with voting. Returns 
 * `splits::Array{T, 2}`: The split values for each node in each tree stored in a 2D array
 * `indexes::Array{Array{Int,1}, 2}`: 2D array of datapoint indexes at each leaf node in each tree.
 Note that RP forest does not store indexes at non-leaf nodes.
+
 Follows the implementation outlined in:
 
 >**Fast Nearest Neighbor Search through Sparse Random Projections and Voting.**
 >Ville Hyvönen, Teemu Pitkänen, Sotirios Tasoulis, Elias Jääsaari, Risto Tuomainen,
 >Liang Wang, Jukka Ilmari Corander, Teemu Roos. Proceedings of the 2016 IEEE
 >Conference on Big Data (2016)
+
+with some modifications.
 """
 function ShrikeIndex(data::AbstractArray{T, 2}, depth::Int, ntrees::Int) where T
     ndims, npoints = size(data)
@@ -79,11 +82,14 @@ end
 ShrikeIndex(data::AbstractArray{T, 2}; depth::Int=4, ntrees::Int=5) where T = ShrikeIndex(data, depth, ntrees)
 
 """
-    ShrikeIndex(data::AbstractArray{T, 2}; depth::Int=4, ntrees::Int=5, k) -> shi
+    ShrikeIndex(data::AbstractArray{T, 2}, k; depth::Int=4, ntrees::Int=5) -> shi
 
-Keyword argument version of the constructor. The argument `k` is the intended
-number of nearest neighbors that you will be approximating. Passing `k` will
-ensure that there are enough points in the leaf nodes.
+Keyword argument version of the constructor with intended number of nearest neighbors.
+The argument `k` is the intended number of nearest neighbors that you will be approximating.
+
+This constructor attempts to use the supplied depth, but ensures that the depth of the tree is
+shallow enough to ensure that each leaf has at least k points. (Otherwise, the index may
+return less than k neighbors when queried.)
 """
 function ShrikeIndex(data::AbstractArray{T, 2}, k::Int; depth::Int=4, ntrees::Int=5) where T
     m, n = size(data)
@@ -94,6 +100,32 @@ function ShrikeIndex(data::AbstractArray{T, 2}, k::Int; depth::Int=4, ntrees::In
         safedepth = depth
     end
     return ShrikeIndex(data, safedepth, ntrees)
+end
+
+"""
+    ShrikeIndex(data::AbstractArray{T, 2}, max_k::Int; ntrees::Int=5) where T -> shi
+
+**Parameters**
+
+1. `data`: A (dxn) array. Each column is a datapoint with dimension `d`.
+2. `max_k`: The maximum number of neighbors that will be queried. If intend
+to use the `ShrikeIndex` to approximate at most 10 nearest neigbors of a point,
+set `max_k = 10`. This argument is used to infer the deepest tree depth possible
+so as to maximize speed,
+
+**Keyword Arguments**
+
+3. `ntrees`: The number of trees in the index. More trees means more accuracy,
+more memory and less speed. Use this to tune the speed/accuracy tradeoff.
+
+This constructor sets the tree depth to be the maximum depth possible given `max_k`.
+This way, the accuracy/memory tradeoff is determined by `ntrees` and the desired `vote_cutoff`
+(`vote_cutoff` is a parameter passed to `ann` or `knngraph`).
+"""
+function ShrikeIndex(data::AbstractArray{T, 2}, max_k::Int; ntrees::Int=5) where T
+    m, n = size(data)
+    maxdepth = floor(Int, log(2, n) - log(2, max_k))
+    return ShrikeIndex(data, maxdepth, ntrees)
 end
 
 function Base.show(io::IO, shi::ShrikeIndex)
