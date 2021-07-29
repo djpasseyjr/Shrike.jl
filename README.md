@@ -45,7 +45,7 @@ In this case, since we need an index that can find the 100 nearest neighbors, se
 some leaf nodes with less than 100 points. The index will infer this using `maxk` and set the `depth` to be as large as
 possible given `maxk`. In this case, `depth =  6`.
 
-To query the index for approximte 10 nearest neighbors use:
+To query the index for approximate 10 nearest neighbors use:
 
 ```jl
 k = 10
@@ -53,7 +53,7 @@ q = X[:, 1]
 approx_nn = ann(shi, q, k; vote_cutoff=2)
 ```
 
-1. The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included in a linear search. Each tree "votes" for the points a leaf node, so if there aren't many point in the leaves and there aren't many trees, the odds of a point receiving more than one vote is low.  Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy. When `depth` is large and `ntrees` is less than 5, it is reccomended to set `vote_cutoff = 1`.
+1. The `vote_cutoff` parameter signifies how many "votes" a point needs in order to be included in a linear search. Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy. Each tree "votes" for all points in relevant leaf nodes. If there aren't many points in the leaves, and there aren't many trees, the odds of a point receiving more than one vote is low. Thus, when `depth` is large and `ntrees` is less than 5, it is reccomended to set `vote_cutoff = 1`.
 
 ## KNN-Graphs
 
