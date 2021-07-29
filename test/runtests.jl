@@ -53,6 +53,7 @@ end
     @test length(ann(shi, X[:, 1:1], k; vote_cutoff=2)) == k
     @test all(size(allknn(shi, k, ne_iters=2)) .== (npoints, k))
     @test (knngraph(shi, k, ne_iters=2)).ne == k * npoints
+    @test (knngraph(shi, k, ne_iters=2, vote_cutoff=2)).ne == k * npoints        
 end
 
 
