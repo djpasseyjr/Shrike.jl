@@ -1,6 +1,5 @@
 module Shrike
 
-    using AbstractTrees
     using DataStructures
     using Distances
     using LightGraphs

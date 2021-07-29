@@ -1,0 +1,6 @@
+[deps]
+Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
+HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
+NearestNeighbors = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
+NPZ = "15e1cf62-19b3-5cfa-8e77-841668bca605"
+Shrike = "e7e127b8-87f2-11eb-1459-934231b01f31"
