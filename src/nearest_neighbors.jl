@@ -248,7 +248,7 @@ The `vote_cutoff` parameter signifies how many "votes" a point needs in order to
 included in a linear search. Increasing `vote_cutoff` speeds up the algorithm but may reduce accuracy.
 """
 function _allknn(shi::ShrikeIndex{T}, k::Int, vote_cutoff::Int) where T
-	votes = collect_votes(shi, k, vote_cutoff)
+	votes = collect_votes(shi, k)
     knn = ThreadsX.map(
 		(i,v) -> build_neighbor_explorer(i, v, shi, k, vote_cutoff),
 		1:shi.npoints,
