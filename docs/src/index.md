@@ -14,14 +14,14 @@ The implementation here is based on the [MRPT algorithm](https://helda.helsinki.
 To install just type
 
 ```jl
-] add https://github.com/djpasseyjr/Shrike.jl
+] add Shrike
 ```
 
 in the REPL or
 
 ```jl
 using Pkg
-Pkg.add(path="https://github.com/djpasseyjr/Shrike.jl")
+Pkg.add("Shrike")
 ```
 
 ## Build an Index
